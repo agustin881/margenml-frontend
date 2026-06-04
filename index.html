@@ -305,6 +305,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
       <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
       <div class="tab" onclick="setTab('top',this)">🏆 Top Productos</div>
       <div class="tab" onclick="setTab('alertas',this)">⚠️ Alertas</div>
+      <div class="tab" onclick="setTab('config',this)">⚙️ Configuración</div>
     </div>
 
     <div id="tab-ventas">
@@ -513,6 +514,60 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
       <div class="panel">
         <div class="panel-header"><span class="panel-title">🚫 Ventas canceladas</span><span class="panel-meta" id="cnt-ca">—</span></div>
         <div class="tw"><table><thead><tr><th>Fecha</th><th>SKU</th><th>Producto</th><th>Precio original</th><th>Motivo</th></tr></thead><tbody id="cab"></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="tab-config" style="display:none">
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-header"><span class="panel-title">📦 Costos de productos</span><span class="panel-meta" id="cfg-costos-status">No cargado — se usa costo $0</span></div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <p style="font-size:13px;color:var(--text2);margin:0">Subí el Excel de Contabilium (Productos → Exportar). Columnas: SKU · Costo Interno · IVA</p>
+          <label id="card-cb-dash" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:.15s;max-width:320px" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            📂 Seleccionar Excel de costos
+            <input type="file" id="file-cb-dash" accept=".xlsx,.xls" style="display:none" onchange="cargarCostosDesdeDash(this)">
+          </label>
+          <div id="cfg-costos-lista" style="font-size:12px;color:var(--text3)"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-header"><span class="panel-title">⚙️ Parámetros de cálculo</span></div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:13px;color:var(--text2);font-weight:500;min-width:140px">📢 Publicidad</span>
+            <input type="number" id="cfg-pub-dash" value="2.5" min="0" max="10" step="0.1"
+              onchange="sincronizarCfg('pub',this.value)"
+              style="width:70px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+            <span style="font-size:12px;color:var(--text3)">% sobre precio de venta c/IVA</span>
+          </div>
+
+          <div style="border-top:1px solid var(--border)"></div>
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:13px;color:var(--text2);font-weight:500;min-width:140px">🚚 Costo Flex</span>
+            <input type="number" id="cfg-flex-dash" value="0" min="0" step="1"
+              onchange="sincronizarCfg('flex',this.value)"
+              style="width:90px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+            <span style="font-size:12px;color:var(--text3)">ARS s/IVA — costo logístico para envíos Flex</span>
+          </div>
+
+          <div style="border-top:1px solid var(--border)"></div>
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:13px;color:var(--text2);font-weight:500;min-width:140px">📊 IIBB</span>
+            <input type="number" id="cfg-iibb-dash" value="3.9" min="0" max="15" step="0.1"
+              onchange="sincronizarCfg('iibb',this.value)"
+              style="width:70px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+            <span style="font-size:12px;color:var(--text3)">% sobre precio neto s/IVA (promedio Convenio Multilateral)</span>
+          </div>
+
+          <div style="border-top:1px solid var(--border)"></div>
+
+          <button onclick="reanalizar()" style="align-self:flex-start;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+            🔄 Recalcular con nuevos parámetros
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1042,6 +1097,7 @@ window.addEventListener('load', function(){
     // Saltear pantalla de inicio directamente al dashboard
     document.getElementById('screen-upload').style.display='none';
     document.getElementById('screen-dashboard').style.display='block';
+    sincronizarCfgDesdeLS();
     // Cargar ventas automáticamente
     cargarVentasML();
   }
@@ -1692,11 +1748,65 @@ function ord(col){
 function setTab(nombre,el){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
-  ['ventas','graficos','top','alertas'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===nombre?'block':'none';});
+  ['ventas','graficos','top','alertas','config'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===nombre?'block':'none';});
   if(nombre==='graficos') renderGraficos();
+  if(nombre==='config') sincronizarCfgDesdeLS();
 }
 
 var TOP_ULTIMO_ORD = null;
+
+// ── CONFIGURACIÓN DESDE DASHBOARD ────────────────────────────────
+function sincronizarCfgDesdeLS(){
+  var pub  = localStorage.getItem('cfg_pub')  || document.getElementById('cfg-pub')  && document.getElementById('cfg-pub').value  || '2.5';
+  var flex = localStorage.getItem('cfg_flex') || document.getElementById('cfg-flex') && document.getElementById('cfg-flex').value || '0';
+  var iibb = localStorage.getItem('cfg_iibb') || document.getElementById('cfg-iibb') && document.getElementById('cfg-iibb').value || '3.9';
+  var ep = document.getElementById('cfg-pub-dash');  if(ep) ep.value = pub;
+  var ef = document.getElementById('cfg-flex-dash'); if(ef) ef.value = flex;
+  var ei = document.getElementById('cfg-iibb-dash'); if(ei) ei.value = iibb;
+  var st = document.getElementById('cfg-costos-status');
+  if(st) st.textContent = DCB ? '✅ '+DCB.length+' productos cargados' : 'No cargado — se usa costo $0';
+}
+
+function sincronizarCfg(campo, valor){
+  // Sincroniza el valor entre los inputs del dash y los de la pantalla de inicio
+  localStorage.setItem('cfg_'+campo, valor);
+  var orig = document.getElementById('cfg-'+campo);
+  if(orig) orig.value = valor;
+}
+
+function cargarCostosDesdeDash(input){
+  // Reutilizar el mismo input file del original disparando su lógica
+  var fileDash = input.files[0];
+  if(!fileDash) return;
+  // Crear un DataTransfer para pasarle el archivo al input original
+  var dt = new DataTransfer();
+  dt.items.add(fileDash);
+  var fileOriginal = document.getElementById('file-cb');
+  if(fileOriginal){
+    fileOriginal.files = dt.files;
+    fileOriginal.dispatchEvent(new Event('change'));
+  }
+  // Actualizar status visual
+  setTimeout(function(){
+    var st = document.getElementById('cfg-costos-status');
+    if(st) st.textContent = DCB ? '✅ '+DCB.length+' productos cargados' : 'Error al cargar';
+    var lista = document.getElementById('cfg-costos-lista');
+    if(lista && DCB) lista.textContent = DCB.slice(0,5).map(function(p){return p.sku;}).join(' · ')+(DCB.length>5?' · ...':'');
+  }, 1500);
+}
+
+function reanalizar(){
+  // Tomar valores del dashboard y sincronizar antes de analizar
+  var ep = document.getElementById('cfg-pub-dash');
+  var ef = document.getElementById('cfg-flex-dash');
+  var ei = document.getElementById('cfg-iibb-dash');
+  if(ep){ sincronizarCfg('pub',ep.value); }
+  if(ef){ sincronizarCfg('flex',ef.value); }
+  if(ei){ sincronizarCfg('iibb',ei.value); }
+  analizar();
+  // Ir a ventas después de recalcular
+  setTab('ventas', document.querySelectorAll('.tab')[0]);
+}
 function topOrd(asc, desc) {
   var actual = document.getElementById('top-o').value;
   // Toggle: si ya está ordenado por este criterio, invertir
