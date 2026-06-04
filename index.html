@@ -685,8 +685,19 @@ async function cargarVentasML(){
           ingresoEnvio: 0,
           costoEnvio:   -(v.costo_envio||0),
           descBonif:    0,
-          formaEntrega: v.logistic_type||'',
-          anulaciones:  0,
+          formaEntrega: (function(lt){
+            lt = (lt||'').toLowerCase();
+            if(lt === 'fulfillment')    return 'Fulfillment (Full)';
+            if(lt === 'self_service')   return 'Acuerdo con el comprador';
+            if(lt === 'cross_docking')  return 'Colecta';
+            if(lt === 'drop_off')       return 'Colecta';
+            if(lt === 'xd_drop_off')    return 'Colecta';
+            if(lt === 'me2')            return 'Flex';
+            if(lt.includes('flex'))     return 'Flex';
+            if(lt.includes('full'))     return 'Fulfillment (Full)';
+            if(lt.includes('colecta'))  return 'Colecta';
+            return lt;
+          })(v.logistic_type),          anulaciones:  0,
           totalARS:     v.precio,
           estadoML:     v.estado||'',
           sku:          v.sku||'',
