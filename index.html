@@ -651,6 +651,10 @@ async function cargarVentasML(){
       btn.style.borderColor='var(--green)';btn.style.color='var(--green)';
       btn.disabled = false;
       chkListo();
+      // Si ya estamos en el dashboard (auto-login), analizar automáticamente
+      if(document.getElementById('screen-dashboard').style.display !== 'none'){
+        analizar();
+      }
       return;
     }
 
