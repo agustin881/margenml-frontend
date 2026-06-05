@@ -522,10 +522,15 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
         <div class="panel-header"><span class="panel-title">📦 Costos de productos</span><span class="panel-meta" id="cfg-costos-status">No cargado — se usa costo $0</span></div>
         <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
           <p style="font-size:13px;color:var(--text2);margin:0">Subí el Excel de Contabilium (Productos → Exportar). Columnas: SKU · Costo Interno · IVA</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label id="card-cb-dash" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:.15s;max-width:320px" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
             📂 Seleccionar Excel de costos
             <input type="file" id="file-cb-dash" accept=".xlsx,.xls" style="display:none" onchange="cargarCostosDesdeDash(this)">
           </label>
+          <button onclick="cargarCostosContabilium()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;cursor:pointer;font-size:13px;color:#10b981;font-family:'DM Sans',sans-serif;transition:.15s" onmouseover="this.style.background='rgba(16,185,129,.2)'" onmouseout="this.style.background='rgba(16,185,129,.1)'">
+            🔗 Importar desde Contabilium
+          </button>
+          </div>
           <div id="cfg-costos-lista" style="font-size:12px;color:var(--text3)"></div>
         </div>
       </div>
@@ -584,7 +589,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 
 <script>
 // ── BACKEND URL ──────────────────────────────────────────────────
-var BACKEND_URL = 'https://margenml-backend.vercel.app';
+var BACKEND_URL = 'https://margenml-backend-production.up.railway.app';
 
 // ── MERCADOLIBRE OAuth ───────────────────────────────────────────
 var ML_CLIENT_ID   = '7675542594083413';
@@ -1818,6 +1823,37 @@ function reanalizar(){
   // Ir a ventas después de recalcular
   setTab('ventas', document.querySelectorAll('.tab')[0]);
 }
+
+function cargarCostosContabilium(){
+  var btn = event && event.target ? event.target : document.querySelector('[onclick*="cargarCostosContabilium"]');
+  var textoOriginal = btn.textContent;
+  btn.textContent = '⏳ Importando...';
+  btn.disabled = true;
+
+  fetch(BACKEND_URL + '/api/costos/contabilium')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.error) throw new Error(data.error);
+      // Convertir al formato interno de DCB
+      DCB = data.costos.map(function(p){
+        return { sku: p.codigo, nombre: p.nombre, costo: p.costoInterno, iva: p.iva };
+      });
+      var st = document.getElementById('cfg-costos-status');
+      if(st) st.textContent = '✅ '+DCB.length+' productos importados desde Contabilium';
+      var lista = document.getElementById('cfg-costos-lista');
+      if(lista) lista.textContent = DCB.slice(0,5).map(function(p){return p.sku;}).join(' · ')+(DCB.length>5?' · ...':'');
+      btn.textContent = '✅ '+DCB.length+' productos';
+      btn.disabled = false;
+      // Recalcular con los costos nuevos
+      if(VENTAS && VENTAS.length > 0) analizar();
+    })
+    .catch(function(e){
+      btn.textContent = '❌ '+e.message;
+      btn.disabled = false;
+      console.error('Contabilium error:', e);
+    });
+}
+
 function topOrd(asc, desc) {
   var actual = document.getElementById('top-o').value;
   // Toggle: si ya está ordenado por este criterio, invertir
