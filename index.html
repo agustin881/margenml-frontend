@@ -1335,14 +1335,15 @@ async function analizar(){
     var estadoLow = String(row.estadoML||'').toLowerCase();
     // Devolución real = producto en camino de vuelta o finalizada
     // "En preparación" = cliente inició pero no devolvió todavía → venta normal
-    var esDevolucion = estadoLow.includes('devoluci') && (
+    var esDevolucion = estadoLow.includes('refund') || (estadoLow.includes('devoluci') && (
       estadoLow.includes('en camino') ||
       estadoLow.includes('finaliz') ||
       estadoLow.includes('revisada') ||
       estadoLow.includes('solicit') ||
       estadoLow.includes('cambio entregado')
-    );
+    ));
     var esCancelada  = !esDevolucion && (
+                       estadoLow.includes('cancel') ||
                        estadoLow.includes('cancelad') ||
                        estadoLow.includes('paquete cancelado') ||
                        estadoLow.includes('cancelaste'));
