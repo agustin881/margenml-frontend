@@ -877,7 +877,7 @@ async function cargarVentasML(){
   }
 }
 
-var DML=null,DCB=null,VENTAS=[],FILT=[],PAG=1,PPP=50,COL=null,DIR=-1,SOLOINCMP=false;
+var DML=null,DCB=(function(){try{var _s=localStorage.getItem('margenml_dcb');return _s?JSON.parse(_s):null;}catch(e){return null;}})(),VENTAS=[],FILT=[],PAG=1,PPP=50,COL=null,DIR=-1,SOLOINCMP=false;
 
 // Tabla de alícuotas IIBB por provincia (fuente: CM05)
 var IIBB_PROV = {
@@ -1839,6 +1839,8 @@ function cargarCostosContabilium(){
       DCB = data.costos.map(function(p){
         return { sku: p.codigo, nombre: p.nombre, costo: p.costoInterno, iva: p.iva };
       });
+      // Guardar los costos para que se carguen solos la proxima vez
+      try{ localStorage.setItem('margenml_dcb', JSON.stringify(DCB)); }catch(e){}
       var st = document.getElementById('cfg-costos-status');
       if(st) st.textContent = '✅ '+DCB.length+' productos importados desde Contabilium';
       var lista = document.getElementById('cfg-costos-lista');
