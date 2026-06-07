@@ -673,7 +673,8 @@ async function cargarVentasML(){
   try {
     // Intentar cargar desde el backend (Supabase) primero
     var desde = new Date();
-    desde.setDate(desde.getDate()-7);
+    desde.setMonth(4, 1);            // 1 de mayo (enero=0, mayo=4) -> trae mayo + junio
+    desde.setHours(0, 0, 0, 0);
     var desdeISO = desde.toISOString();
     var backendResp = await fetch(BACKEND_URL+'/api/ventas?user_id='+ML_USER_ID+'&desde='+desdeISO);
     var backendData = await backendResp.json();
