@@ -1303,7 +1303,7 @@ async function analizar(){
   prog(10,'Leyendo productos...');
   var costos={};
   if(DCB) DCB.forEach(function(p){costos[p.sku.toUpperCase()]=p;});
-
+console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Contabilium:',Object.keys(costos)[0],'| sku venta:',DML&&DML[0]?String(DML[0].sku).trim().toUpperCase():'(sin ventas)');
   prog(30,'Procesando ventas...');
   await sleep(10);
 
