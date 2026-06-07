@@ -693,7 +693,7 @@ async function cargarVentasML(){
           formaEntrega: (function(lt){
             lt = (lt||'').toLowerCase();
             if(lt === 'fulfillment')    return 'Fulfillment (Full)';
-            if(lt === 'self_service')   return 'Acuerdo con el comprador';
+            if(lt === 'self_service')   return 'Flex';
             if(lt === 'cross_docking')  return 'Colecta';
             if(lt === 'drop_off')       return 'Colecta';
             if(lt === 'xd_drop_off')    return 'Colecta';
@@ -825,9 +825,9 @@ async function cargarVentasML(){
       // Forma de entrega
       var formaEntrega = '';
       var lt = (shipData.logistic_type||'').toLowerCase();
-      if(lt.includes('fulfillment')||lt.includes('self_service')) formaEntrega = 'Mercado Envíos Full';
+      if(lt.includes('self_service')||lt.includes('flex')) formaEntrega = 'Mercado Envíos Flex';
+      else if(lt.includes('fulfillment')) formaEntrega = 'Mercado Envíos Full';
       else if(lt.includes('drop_off')||lt.includes('xd_drop_off')) formaEntrega = 'Colecta de Mercado Envíos';
-      else if(lt.includes('flex')) formaEntrega = 'Mercado Envíos Flex';
       else if(lt.includes('not_specified')||lt==='') formaEntrega = 'Acuerdo con el comprador';
       else formaEntrega = lt;
 
