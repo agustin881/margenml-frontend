@@ -305,6 +305,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
       <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
       <div class="tab" onclick="setTab('top',this)">🏆 Top Productos</div>
       <div class="tab" onclick="setTab('alertas',this)">⚠️ Alertas</div>
+      <div class="tab" onclick="setTab('reclamo',this)">📦 Envíos mal cobrados</div>
       <div class="tab" onclick="setTab('config',this)">⚙️ Configuración</div>
     </div>
 
@@ -515,6 +516,42 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
         <div class="panel-header"><span class="panel-title">🚫 Ventas canceladas</span><span class="panel-meta" id="cnt-ca">—</span></div>
         <div class="tw"><table><thead><tr><th>Fecha</th><th>SKU</th><th>Producto</th><th>Precio original</th><th>Motivo</th></tr></thead><tbody id="cab"></tbody></table></div>
       </div>
+    </div>
+
+    <!-- ENVÍOS MAL COBRADOS -->
+    <div id="tab-reclamo" style="display:none">
+      <style>
+        .rfiltro{padding:6px 12px;border-radius:8px;border:1px solid #2a2a3a;background:transparent;color:#9aa;cursor:pointer;font-size:13px}
+        .rfiltro.on{border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,.10)}
+      </style>
+      <div class="panel" style="padding:16px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div class="panel-title">📦 Envíos mal cobrados</div>
+            <div class="panel-meta" id="reclamo-meta">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--text3)">Total a reclamar (c/IVA)</div>
+            <div id="reclamo-total" style="font-size:24px;font-weight:800;color:var(--accent)">—</div>
+          </div>
+        </div>
+        <div id="reclamo-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center">
+          <span style="font-size:12px;color:var(--text3);margin-right:4px">Tipo de envío:</span>
+          <button class="rfiltro on" data-tipo="full" onclick="toggleReclamoFiltro(this)">📦 Full</button>
+          <button class="rfiltro on" data-tipo="flex" onclick="toggleReclamoFiltro(this)">🚚 Flex</button>
+          <button class="rfiltro" data-tipo="colecta" onclick="toggleReclamoFiltro(this)">📥 Colecta</button>
+          <button class="rfiltro" data-tipo="m1" onclick="toggleReclamoFiltro(this)">🤝 M1</button>
+          <button class="btn-sm btn-export" style="margin-left:auto" onclick="exportarReclamo()">⬇️ Exportar Excel</button>
+        </div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th>N° venta</th><th>Tipo</th><th>SKU</th>
+          <th>Cobrado c/IVA</th><th>Debería c/IVA</th><th>Diferencia</th>
+          <th>Largo</th><th>Ancho</th><th>Alto</th><th>Peso</th>
+        </tr></thead>
+        <tbody id="reclamo-tb"></tbody>
+      </table></div>
     </div>
 
     <div id="tab-config" style="display:none">
@@ -879,6 +916,7 @@ async function cargarVentasML(){
 }
 
 var DML=null,DCB=(function(){try{var _s=localStorage.getItem('margenml_dcb');return _s?JSON.parse(_s):null;}catch(e){return null;}})(),VENTAS=[],FILT=[],PAG=1,PPP=50,COL=null,DIR=-1,SOLOINCMP=false;
+var MEDIDAS=null,RECLAMO_FILAS=[];
 
 // Tabla de alícuotas IIBB por provincia (fuente: CM05)
 var IIBB_PROV = {
@@ -1763,11 +1801,74 @@ function ord(col){
   filtrar();
 }
 
+function tipoLabel(t){return t==='full'?'📦 Full':t==='flex'?'🚚 Flex':t==='colecta'?'📥 Colecta':'🤝 M1';}
+
+function toggleReclamoFiltro(el){ el.classList.toggle('on'); renderReclamo(); }
+
+async function renderReclamo(){
+  var meta=document.getElementById('reclamo-meta');
+  var tb=document.getElementById('reclamo-tb');
+  if(!MEDIDAS){
+    meta.textContent='Cargando medidas de la planilla...';
+    try{
+      var r=await fetch(BACKEND_URL+'/api/medidas');
+      var d=await r.json();
+      MEDIDAS=d.medidas||{};
+    }catch(e){ meta.textContent='Error cargando medidas: '+e.message; return; }
+  }
+  var tipos={};
+  document.querySelectorAll('#reclamo-filtros .rfiltro').forEach(function(b){ if(b.classList.contains('on')) tipos[b.getAttribute('data-tipo')]=true; });
+  var fuente=(typeof DML!=='undefined'&&DML)?DML:[];
+  var filas=[], total=0, sinMedida=0, vistos={};
+  for(var i=0;i<fuente.length;i++){
+    var row=fuente[i];
+    var sku=String(row.sku||'').trim().toUpperCase();
+    if(!sku) continue;
+    var forma=String(row.formaEntrega||'').toLowerCase();
+    var tipo=forma.indexOf('flex')>-1?'flex':forma.indexOf('full')>-1?'full':forma.indexOf('colecta')>-1?'colecta':'m1';
+    if(!tipos[tipo]) continue;
+    var med=MEDIDAS[sku];
+    if(!med||!(med.envioML>0)){ sinMedida++; continue; }
+    var cobrado=Math.abs(parseFloat(row.costoEnvio)||0);
+    if(cobrado<=0) continue;
+    var deberian=med.envioML;
+    var dif=cobrado-deberian;
+    if(dif<=0) continue;   // solo sobrecobros (ML cobró de más)
+    var nro=String(row.nroVenta||'');
+    if(vistos[nro]) continue; vistos[nro]=true;
+    total+=dif;
+    filas.push({nro:nro,tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
+  }
+  filas.sort(function(a,b){return b.dif-a.dif;});
+  RECLAMO_FILAS=filas;
+  meta.textContent=filas.length.toLocaleString('es-AR')+' envíos con sobrecobro · '+sinMedida.toLocaleString('es-AR')+' ventas sin medidas (ignoradas)';
+  document.getElementById('reclamo-total').textContent=fmt(total);
+  tb.innerHTML=filas.length?filas.map(function(f){
+    return '<tr><td class="ts">'+f.nro+'</td><td>'+tipoLabel(f.tipo)+'</td><td class="ts">'+f.sku+'</td>'+
+      '<td class="tm">'+fmt(f.cobrado)+'</td><td class="tm">'+fmt(f.deberian)+'</td>'+
+      '<td class="tm" style="color:var(--accent);font-weight:700">'+fmt(f.dif)+'</td>'+
+      '<td class="tm">'+f.largo+'</td><td class="tm">'+f.ancho+'</td><td class="tm">'+f.alto+'</td><td class="tm">'+f.peso+'</td></tr>';
+  }).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
+}
+
+function exportarReclamo(){
+  if(!RECLAMO_FILAS||!RECLAMO_FILAS.length){alert('No hay datos para exportar.');return;}
+  var aoa=[['N° venta','Tipo','SKU','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
+  RECLAMO_FILAS.forEach(function(f){aoa.push([f.nro,tipoLabel(f.tipo).replace(/^[^ ]+ /,''),f.sku,f.cobrado,f.deberian,f.dif,f.largo,f.ancho,f.alto,f.peso]);});
+  var total=RECLAMO_FILAS.reduce(function(a,f){return a+f.dif;},0);
+  aoa.push([]);aoa.push(['','','','','TOTAL A RECLAMAR',total]);
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Envios mal cobrados');
+  XLSX.writeFile(wb,'envios_mal_cobrados.xlsx');
+}
+
 function setTab(nombre,el){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
-  ['ventas','graficos','top','alertas','config'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===nombre?'block':'none';});
+  ['ventas','graficos','top','alertas','reclamo','config'].forEach(function(t){var el=document.getElementById('tab-'+t); if(el) el.style.display=t===nombre?'block':'none';});
   if(nombre==='graficos') renderGraficos();
+  if(nombre==='reclamo') renderReclamo();
   if(nombre==='config') sincronizarCfgDesdeLS();
 }
 
