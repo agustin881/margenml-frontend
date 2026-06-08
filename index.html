@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.2</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.3</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -1491,10 +1491,10 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.2';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.3';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
-  filtrar();
+  filtrarHoy();
   renderTop();
   renderAlertas();
   setTimeout(initKpiDnD, 100);
@@ -1620,6 +1620,18 @@ function filtrarKpi(tipo, el) {
 }
 
 var KPI_FILTRO_ENTREGA = null;
+
+function hoyISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function filtrarHoy(){
+  var hoy=hoyISO();
+  CAL.ini=hoy;CAL.fin=hoy;CAL.sel=false;
+  document.getElementById('f-des').value=hoy;
+  document.getElementById('f-has').value=hoy;
+  document.getElementById('rango-label').textContent='Hoy';
+  var b=document.getElementById('btn-rango-fecha');
+  if(b){b.style.borderColor='var(--accent)';b.style.color='var(--accent)';}
+  filtrar();
+}
 
 function limpiarF(){
   document.getElementById('f-des').value='';
@@ -1963,7 +1975,7 @@ function topOrd(asc, desc) {
   // Actualizar indicadores de columna
   ['v','g','m','r'].forEach(function(k){
     var el = document.getElementById('top-th-'+k);
-    if(el) el.textContent = el.textContent.replace(' ↑','').replace(' ↓','') + ' ↕';
+    if(el) el.textContent = el.textContent.replace(/ *[↑↓↕]/g,'') + ' ↕';
   });
   var mapCol = {vd:'v',va:'v',gd:'g',ga:'g',md:'m',ma:'m',rd:'r',ra:'r',pd:'m',pa:'m'};
   var col = mapCol[nuevo];
