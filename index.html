@@ -723,7 +723,7 @@ async function cargarVentasML(){
           unidades:     v.unidades||1,
           ingresos:     v.precio,
           cargoVenta:   -(v.comision||0),
-          ingresoEnvio: 0,
+          ingresoEnvio: v.precio_comprador_envio||0,
           costoEnvio:   -(v.costo_envio||0),
           descBonif:    0,
           formaEntrega: (function(lt){
@@ -1493,7 +1493,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value;
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v2.1';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrar();
@@ -1827,7 +1827,7 @@ async function renderReclamo(){
     if(!tipos[tipo]) continue;
     var med=MEDIDAS[sku];
     if(!med||!(med.envioML>0)){ sinMedida++; continue; }
-    var cobrado=Math.abs(parseFloat(row.costoEnvio)||0);
+    var cobrado=Math.max(0, Math.abs(parseFloat(row.costoEnvio)||0) - (parseFloat(row.ingresoEnvio)||0));
     if(cobrado<=0) continue;
     var deberian=med.envioML;
     var dif=cobrado-deberian;
