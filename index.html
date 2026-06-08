@@ -263,15 +263,24 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 
 <div id="screen-dashboard">
   <div class="topbar">
-    <div>
-      <div class="topbar-logo">MargenML</div>
-      <div class="topbar-meta" id="tm">—</div>
+    <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.2</span></div>
+      <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
+        <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
+        <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
+        <div class="tab" onclick="setTab('top',this)">🏆 Top Productos</div>
+        <div class="tab" onclick="setTab('alertas',this)">⚠️ Alertas</div>
+        <div class="tab" onclick="setTab('reclamo',this)">📦 Envíos mal cobrados</div>
+        <div class="tab" onclick="setTab('config',this)">⚙️ Configuración</div>
+      </div>
     </div>
-    <button class="btn-reset" onclick="resetear()">← Cargar nuevos archivos</button>
+    <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <div class="topbar-meta" id="tm">—</div>
+      <button class="btn-reset" onclick="resetear()">← Cargar nuevos</button>
+    </div>
   </div>
   <div class="dash">
-
-
+    <div id="tab-ventas">
     <!-- Renglón 1: Métricas financieras -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px" id="kpi-grid-el">
       <div class="kpi clickable" id="kpi-todos" onclick="filtrarKpi('todos',this)"><div class="kpi-val" id="k-v">—</div><div class="kpi-label">Total ventas</div></div>
@@ -299,17 +308,6 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
     </div>
 
     <div class="alerta-b" id="alerta-p"></div>
-
-    <div class="tabs">
-      <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
-      <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
-      <div class="tab" onclick="setTab('top',this)">🏆 Top Productos</div>
-      <div class="tab" onclick="setTab('alertas',this)">⚠️ Alertas</div>
-      <div class="tab" onclick="setTab('reclamo',this)">📦 Envíos mal cobrados</div>
-      <div class="tab" onclick="setTab('config',this)">⚙️ Configuración</div>
-    </div>
-
-    <div id="tab-ventas">
       <div class="controls">
         <label>Estado:</label>
         <select id="f-est" onchange="filtrar()">
@@ -1493,7 +1491,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v2.1';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.2';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrar();
