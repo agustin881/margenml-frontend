@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.5</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.6</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -465,6 +465,15 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
           </div>
         </div>
 
+      </div>
+
+      <!-- Torta: cantidad de cuotas -->
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-header"><span class="panel-title">🔢 Ventas por cantidad de cuotas</span><span class="panel-meta" id="cuotasN-meta">—</span></div>
+        <div style="padding:16px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <svg id="cuotasN-svg" width="160" height="160" viewBox="0 0 160 160"></svg>
+          <div id="cuotasN-leyenda" style="display:flex;flex-direction:column;gap:10px;font-size:13px;flex:1"></div>
+        </div>
       </div>
 
       <!-- Ranking provincias -->
@@ -787,6 +796,7 @@ async function cargarVentasML(){
           paqueteVarios:'No',
           conPublicidad:false,
           conCuotas:    v.con_cuotas||false,
+          cuotas:       v.cuotas||1,
         };
       }).filter(function(r){ return r.sku && r.sku.trim()!==''; });
 
@@ -934,6 +944,7 @@ async function cargarVentasML(){
         paqueteVarios:'No',
         conPublicidad:false,
         conCuotas:    o.payments&&o.payments[0]&&(o.payments[0].installments||1)>1,
+        cuotas:       (o.payments&&o.payments[0]&&o.payments[0].installments)||1,
       };
     }).filter(function(r){ return r.sku && r.sku.trim()!==''; });
 
@@ -1473,7 +1484,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
         unidades:Math.round(unidades),precioConIva:r2(precioConIva),formaEntrega:formaEntrega,esFlex:esFlex,
         estado:'sin_costo',comisionIncompleta:comisionIncomp,margenPct:null,
         conPublicidad:row.conPublicidad===true,
-        conCuotas:row.conCuotas===true,
+        conCuotas:row.conCuotas===true,cuotas:row.cuotas||1,
         provincia:String(row.provincia||'').trim()});
       continue;
     }
@@ -1510,7 +1521,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
       provincia:provincia,
       estado:estado,comisionIncompleta:comisionIncomp,nombreCB:prod?prod.nombre:'Paquete',
       conPublicidad:row.conPublicidad===true,
-      conCuotas:row.conCuotas===true,
+      conCuotas:row.conCuotas===true,cuotas:row.cuotas||1,
       roi: costoProducto>0 ? r1(gananciaReal/costoProducto*100) : null,
       esPaquete: row.esPaquete||false,
       nroPaquete: row.nroPaquete||null
@@ -1532,7 +1543,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.5';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.6';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -2337,6 +2348,7 @@ function initKpiDnD(){
 }
 
 function renderGraficos(){
+  var FILT = VENTAS; // los gráficos siempre muestran TODAS las ventas, sin el filtro de fecha
   var datos = FILT.filter(function(v){return v.estado!=='cancelada'&&v.margenPct!=null;});
   if(!datos.length) return;
   var total=datos.length;
@@ -2356,6 +2368,18 @@ function renderGraficos(){
     {label:'Con cuotas',  color:'#8b5cf6', n:conCuotas},
     {label:'Sin cuotas',  color:'#64748b', n:sinCuotas}
   ], activos.length);
+
+  // ── TORTA POR CANTIDAD DE CUOTAS (dentro de las que pagaron en cuotas) ──
+  var porCuotas={};
+  activos.filter(function(v){return v.conCuotas===true && (v.cuotas||1)>1;}).forEach(function(v){
+    var c=v.cuotas||0; porCuotas[c]=(porCuotas[c]||0)+1;
+  });
+  var colCuotas=['#8b5cf6','#a78bfa','#6366f1','#818cf8','#38bdf8','#22c55e','#eab308','#f97316','#ef4444','#64748b'];
+  var itemsCuotas=Object.keys(porCuotas).sort(function(a,b){return (a-b);}).map(function(c,i){
+    return {label:c+' cuotas', color:colCuotas[i%colCuotas.length], n:porCuotas[c]};
+  });
+  var totC=itemsCuotas.reduce(function(a,it){return a+it.n;},0);
+  donaSimple('cuotasN-svg','cuotasN-leyenda','cuotasN-meta', itemsCuotas, totC);
 
   // ── RANKING PROVINCIAS POR FACTURACIÓN ──────────────────────
   var TODAS_PROVINCIAS = ['Buenos Aires','Capital Federal','Córdoba','Santa Fe','Mendoza','Tucumán',
