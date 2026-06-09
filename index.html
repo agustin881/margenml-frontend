@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v4.2</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.0</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -620,12 +620,39 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
           <span style="font-size:12px;color:var(--text3);margin-right:4px">Tipo de envío:</span>
           <button class="rfiltro on" data-tipo="full" onclick="toggleReclamoFiltro(this)">📦 Full</button>
           <button class="rfiltro on" data-tipo="colecta" onclick="toggleReclamoFiltro(this)">📥 Colecta</button>
+          <div style="position:relative;margin-left:14px">
+            <button class="btn-sm" id="btn-rango-fecha-r" onclick="toggleCalR(event)" style="min-width:180px;text-align:left">📅 <span id="rango-label-r">Todas las fechas</span></button>
+            <div id="cal-popup-r" style="display:none;position:absolute;top:36px;left:0;z-index:300;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:272px" onclick="event.stopPropagation()">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <button onclick="calNavR(-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8592;</button>
+                <span id="cal-titulo-r" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+                <button onclick="calNavR(1)"  style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8594;</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:6px">
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Do</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Lu</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ma</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Mi</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ju</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Vi</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Sa</span>
+              </div>
+              <div id="cal-grid-r" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px"></div>
+              <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:flex;gap:5px;flex-wrap:wrap">
+                <button onclick="setRapidoR(7)"  class="btn-sm" style="font-size:11px;padding:3px 8px">7 días</button>
+                <button onclick="setRapidoR(15)" class="btn-sm" style="font-size:11px;padding:3px 8px">15 días</button>
+                <button onclick="setRapidoR(30)" class="btn-sm" style="font-size:11px;padding:3px 8px">30 días</button>
+                <button onclick="limpiarR()"     class="btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--accent);color:var(--accent);margin-left:auto">Todas</button>
+              </div>
+            </div>
+            <input type="hidden" id="r-des"><input type="hidden" id="r-has">
+          </div>
           <button class="btn-sm btn-export" style="margin-left:auto" onclick="exportarReclamo()">⬇️ Exportar Excel</button>
         </div>
       </div>
       <div class="tw"><table>
         <thead><tr>
-          <th>N° venta</th><th>Tipo</th><th>SKU</th>
+          <th>Fecha</th><th>N° venta</th><th>Tipo</th><th>SKU</th><th>Publicación</th>
           <th>Cobrado c/IVA</th><th>Debería c/IVA</th><th>Diferencia</th>
           <th>Largo</th><th>Ancho</th><th>Alto</th><th>Peso</th>
         </tr></thead>
@@ -801,6 +828,7 @@ async function cargarVentasML(){
         return {
           nroVenta:     v.nro_venta,
           fechaVenta:   v.fecha,
+          itemId:       (v.raw&&v.raw.order_items&&v.raw.order_items[0]&&v.raw.order_items[0].item&&v.raw.order_items[0].item.id)||'',
           unidades:     v.unidades||1,
           ingresos:     v.precio,
           cargoVenta:   -(v.comision||0),
@@ -960,6 +988,7 @@ async function cargarVentasML(){
       return {
         nroVenta:     String(o.id),
         fechaVenta:   o.date_created,
+        itemId:       (o.order_items&&o.order_items[0]&&o.order_items[0].item&&o.order_items[0].item.id)||'',
         unidades:     item.quantity||1,
         ingresos:     o.total_amount,
         cargoVenta:   -comision,
@@ -1589,7 +1618,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v4.2';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.0';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -2056,6 +2085,87 @@ function limpiarG(){
   renderGraficos();
 }
 
+var CALR={anio:new Date().getFullYear(),mes:new Date().getMonth(),ini:null,fin:null,sel:false,datos:new Set()};
+function toggleCalR(e){
+  e.stopPropagation();
+  var p=document.getElementById('cal-popup-r');
+  if(p.style.display!=='none'){p.style.display='none';return;}
+  CALR.datos=new Set(VENTAS.filter(function(v){return v.fechaISO;}).map(function(v){return v.fechaISO;}));
+  if(CALR.datos.size){var f=Array.from(CALR.datos).sort()[0];CALR.anio=parseInt(f.substring(0,4));CALR.mes=parseInt(f.substring(5,7))-1;}
+  renderCalR();
+  p.style.display='block';
+  document.addEventListener('click',cierraCalFueraR);
+}
+function cierraCalFueraR(e){
+  var p=document.getElementById('cal-popup-r');
+  var b=document.getElementById('btn-rango-fecha-r');
+  if(!p.contains(e.target)&&!b.contains(e.target)){p.style.display='none';document.removeEventListener('click',cierraCalFueraR);}
+}
+function calNavR(d){
+  CALR.mes+=d;
+  if(CALR.mes>11){CALR.mes=0;CALR.anio++;}
+  if(CALR.mes<0){CALR.mes=11;CALR.anio--;}
+  renderCalR();
+}
+function renderCalR(){
+  document.getElementById('cal-titulo-r').textContent=MESES[CALR.mes]+' '+CALR.anio;
+  var primer=new Date(CALR.anio,CALR.mes,1).getDay();
+  var ultimo=new Date(CALR.anio,CALR.mes+1,0).getDate();
+  var hoy=new Date().toISOString().substring(0,10);
+  var html='';
+  for(var i=0;i<primer;i++) html+='<div></div>';
+  for(var d=1;d<=ultimo;d++){
+    var iso=CALR.anio+'-'+String(CALR.mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls='cd';
+    if(iso===hoy) cls+=' hoy';
+    if(iso===CALR.ini) cls+=' s1';
+    if(iso===CALR.fin) cls+=' s2';
+    if(CALR.ini&&CALR.fin&&iso>CALR.ini&&iso<CALR.fin) cls+=' rng';
+    if(!CALR.datos.has(iso)) cls+=' vacio';
+    html+='<div class="'+cls+'" data-iso="'+iso+'" onclick="diaClickR(\''+iso+'\')" onmouseenter="diaHoverR(\''+iso+'\')">'+d+'</div>';
+  }
+  document.getElementById('cal-grid-r').innerHTML=html;
+}
+function diaClickR(iso){
+  if(!CALR.ini||(!CALR.sel&&CALR.fin)){CALR.ini=iso;CALR.fin=null;CALR.sel=true;}
+  else if(CALR.sel){if(iso<CALR.ini){CALR.fin=CALR.ini;CALR.ini=iso;}else{CALR.fin=iso;}CALR.sel=false;aplicarRangoR();return;}
+  renderCalR();
+}
+function diaHoverR(iso){
+  if(!CALR.sel||!CALR.ini) return;
+  var dias=document.getElementById('cal-grid-r').querySelectorAll('.cd');
+  var des=CALR.ini<iso?CALR.ini:iso;
+  var has=CALR.ini<iso?iso:CALR.ini;
+  dias.forEach(function(el){var d=el.getAttribute('data-iso');if(!d)return;el.classList.remove('rng','s2');if(d>des&&d<has)el.classList.add('rng');if(d===has)el.classList.add('s2');});
+}
+function aplicarRangoR(){
+  document.getElementById('r-des').value=CALR.ini||'';
+  document.getElementById('r-has').value=CALR.fin||'';
+  var lbl='';
+  if(CALR.ini&&CALR.fin) lbl=fmtLbl(CALR.ini)+' → '+fmtLbl(CALR.fin);
+  else if(CALR.ini) lbl='Desde '+fmtLbl(CALR.ini);
+  document.getElementById('rango-label-r').textContent=lbl||'Todas las fechas';
+  var b=document.getElementById('btn-rango-fecha-r');
+  b.style.borderColor=lbl?'var(--accent)':'';
+  b.style.color=lbl?'var(--accent)':'';
+  document.getElementById('cal-popup-r').style.display='none';
+  document.removeEventListener('click',cierraCalFueraR);
+  renderReclamo();
+}
+function setRapidoR(dias){
+  var hoy=new Date();var des=new Date(hoy);des.setDate(hoy.getDate()-dias+1);
+  CALR.ini=des.toISOString().substring(0,10);CALR.fin=hoy.toISOString().substring(0,10);CALR.sel=false;
+  aplicarRangoR();
+}
+function limpiarR(){
+  document.getElementById('r-des').value='';document.getElementById('r-has').value='';
+  CALR.ini=null;CALR.fin=null;CALR.sel=false;
+  document.getElementById('rango-label-r').textContent='Todas las fechas';
+  var b=document.getElementById('btn-rango-fecha-r');b.style.borderColor='';b.style.color='';
+  document.getElementById('cal-popup-r').style.display='none';
+  renderReclamo();
+}
+
 function setRapido(dias){
   var hoy=new Date();
   var des=new Date(hoy);des.setDate(hoy.getDate()-dias+1);
@@ -2133,11 +2243,16 @@ async function renderReclamo(){
   var tipos={};
   document.querySelectorAll('#reclamo-filtros .rfiltro').forEach(function(b){ if(b.classList.contains('on')) tipos[b.getAttribute('data-tipo')]=true; });
   var fuente=(typeof DML!=='undefined'&&DML)?DML:[];
+  var rDes=(document.getElementById('r-des')||{}).value||'';
+  var rHas=(document.getElementById('r-has')||{}).value||'';
   var filas=[], total=0, sinMedida=0, vistos={};
   for(var i=0;i<fuente.length;i++){
     var row=fuente[i];
     var sku=String(row.sku||'').trim().toUpperCase();
     if(!sku) continue;
+    var fISO=parseFecha(row.fechaVenta);
+    if(rDes&&fISO&&fISO<rDes) continue;
+    if(rHas&&fISO&&fISO>rHas) continue;
     var forma=String(row.formaEntrega||'').toLowerCase();
     var tipo=forma.indexOf('flex')>-1?'flex':forma.indexOf('full')>-1?'full':forma.indexOf('colecta')>-1?'colecta':'m1';
     if(!tipos[tipo]) continue;
@@ -2151,26 +2266,26 @@ async function renderReclamo(){
     var nro=String(row.nroVenta||'');
     if(vistos[nro]) continue; vistos[nro]=true;
     total+=dif;
-    filas.push({nro:nro,tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
+    filas.push({nro:nro,fechaISO:fISO,pub:row.itemId||'',tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
   }
   filas.sort(function(a,b){return b.dif-a.dif;});
   RECLAMO_FILAS=filas;
   meta.textContent=filas.length.toLocaleString('es-AR')+' envíos con sobrecobro · '+sinMedida.toLocaleString('es-AR')+' ventas sin medidas (ignoradas)';
   document.getElementById('reclamo-total').textContent=fmt(total);
   tb.innerHTML=filas.length?filas.map(function(f){
-    return '<tr><td class="ts">'+f.nro+'</td><td>'+tipoLabel(f.tipo)+'</td><td class="ts">'+f.sku+'</td>'+
+    return '<tr><td>'+fmtFecha(f.fechaISO)+'</td><td class="ts">'+f.nro+'</td><td>'+tipoLabel(f.tipo)+'</td><td class="ts">'+f.sku+'</td><td class="ts">'+(f.pub||'')+'</td>'+
       '<td class="tm">'+fmt(f.cobrado)+'</td><td class="tm">'+fmt(f.deberian)+'</td>'+
       '<td class="tm" style="color:var(--accent);font-weight:700">'+fmt(f.dif)+'</td>'+
       '<td class="tm">'+f.largo+'</td><td class="tm">'+f.ancho+'</td><td class="tm">'+f.alto+'</td><td class="tm">'+f.peso+'</td></tr>';
-  }).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
+  }).join(''):'<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
 }
 
 function exportarReclamo(){
   if(!RECLAMO_FILAS||!RECLAMO_FILAS.length){alert('No hay datos para exportar.');return;}
-  var aoa=[['N° venta','Tipo','SKU','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
-  RECLAMO_FILAS.forEach(function(f){aoa.push([f.nro,tipoLabel(f.tipo).replace(/^[^ ]+ /,''),f.sku,f.cobrado,f.deberian,f.dif,f.largo,f.ancho,f.alto,f.peso]);});
+  var aoa=[['Fecha','N° venta','Tipo','SKU','Publicación','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
+  RECLAMO_FILAS.forEach(function(f){aoa.push([f.fechaISO,f.nro,tipoLabel(f.tipo).replace(/^[^ ]+ /,''),f.sku,f.pub||'',f.cobrado,f.deberian,f.dif,f.largo,f.ancho,f.alto,f.peso]);});
   var total=RECLAMO_FILAS.reduce(function(a,f){return a+f.dif;},0);
-  aoa.push([]);aoa.push(['','','','','TOTAL A RECLAMAR',total]);
+  aoa.push([]);aoa.push(['','','','','','','TOTAL A RECLAMAR',total]);
   var ws=XLSX.utils.aoa_to_sheet(aoa);
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Envios mal cobrados');
