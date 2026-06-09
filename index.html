@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.2</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.3</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -543,7 +543,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 
     <div id="tab-top" style="display:none">
       <div class="controls">
-        <label>Mostrar:</label>
+        <label style="margin-left:auto">Mostrar:</label>
         <select id="top-n" onchange="renderTop()">
           <option value="10">Top 10</option>
           <option value="20">Top 20</option>
@@ -552,7 +552,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
         </select>
         <span style="font-size:12px;color:var(--text3)">· Hacé click en los encabezados para ordenar</span>
         <input type="hidden" id="top-o" value="gd">
-        <div style="position:relative;margin-left:auto">
+        <div style="position:relative;order:-1">
             <button class="btn-sm" id="btn-rango-fecha-t" onclick="toggleCalT(event)" style="min-width:180px;text-align:left">📅 <span id="rango-label-t">Todas las fechas</span></button>
             <div id="cal-popup-t" style="display:none;position:absolute;top:36px;left:0;z-index:300;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:272px" onclick="event.stopPropagation()">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -1674,7 +1674,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.2';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.3';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
