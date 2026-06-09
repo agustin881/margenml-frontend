@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.0</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.1</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -605,7 +605,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
         .rfiltro{padding:6px 12px;border-radius:8px;border:1px solid #2a2a3a;background:transparent;color:#9aa;cursor:pointer;font-size:13px}
         .rfiltro.on{border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,.10)}
       </style>
-      <div class="panel" style="padding:16px;margin-bottom:14px">
+      <div class="panel" style="padding:16px;margin-bottom:14px;overflow:visible">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
           <div>
             <div class="panel-title">📦 Envíos mal cobrados</div>
@@ -652,9 +652,9 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
       </div>
       <div class="tw"><table>
         <thead><tr>
-          <th>Fecha</th><th>N° venta</th><th>Tipo</th><th>SKU</th><th>Publicación</th>
-          <th>Cobrado c/IVA</th><th>Debería c/IVA</th><th>Diferencia</th>
-          <th>Largo</th><th>Ancho</th><th>Alto</th><th>Peso</th>
+          <th id="rth-fechaISO" onclick="ordReclamo('fechaISO')" style="cursor:pointer">Fecha</th><th id="rth-nro" onclick="ordReclamo('nro')" style="cursor:pointer">N° venta</th><th id="rth-tipo" onclick="ordReclamo('tipo')" style="cursor:pointer">Tipo</th><th id="rth-sku" onclick="ordReclamo('sku')" style="cursor:pointer">SKU</th><th id="rth-pub" onclick="ordReclamo('pub')" style="cursor:pointer">Publicación</th>
+          <th id="rth-cobrado" onclick="ordReclamo('cobrado')" style="cursor:pointer">Cobrado c/IVA</th><th id="rth-deberian" onclick="ordReclamo('deberian')" style="cursor:pointer">Debería c/IVA</th><th id="rth-dif" onclick="ordReclamo('dif')" style="cursor:pointer">Diferencia</th>
+          <th id="rth-largo" onclick="ordReclamo('largo')" style="cursor:pointer">Largo</th><th id="rth-ancho" onclick="ordReclamo('ancho')" style="cursor:pointer">Ancho</th><th id="rth-alto" onclick="ordReclamo('alto')" style="cursor:pointer">Alto</th><th id="rth-peso" onclick="ordReclamo('peso')" style="cursor:pointer">Peso</th>
         </tr></thead>
         <tbody id="reclamo-tb"></tbody>
       </table></div>
@@ -1026,7 +1026,7 @@ async function cargarVentasML(){
 }
 
 var DML=null,DCB=(function(){try{var _s=localStorage.getItem('margenml_dcb');return _s?JSON.parse(_s):null;}catch(e){return null;}})(),VENTAS=[],FILT=[],PAG=1,PPP=50,COL=null,DIR=-1,SOLOINCMP=false;
-var MEDIDAS=null,RECLAMO_FILAS=[];
+var MEDIDAS=null,RECLAMO_FILAS=[],RECLAMO_ORD={col:'dif',dir:-1};
 
 // Tabla de alícuotas IIBB por provincia (fuente: CM05)
 var IIBB_PROV = {
@@ -1618,7 +1618,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.0';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.1';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -2268,7 +2268,13 @@ async function renderReclamo(){
     total+=dif;
     filas.push({nro:nro,fechaISO:fISO,pub:row.itemId||'',tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
   }
-  filas.sort(function(a,b){return b.dif-a.dif;});
+  var oc=RECLAMO_ORD.col, od=RECLAMO_ORD.dir;
+  filas.sort(function(a,b){
+    var av=a[oc], bv=b[oc];
+    if(typeof av==='string'||typeof bv==='string'){av=String(av||'');bv=String(bv||'');return av<bv?-od:av>bv?od:0;}
+    return ((av||0)-(bv||0))*od;
+  });
+  updateReclamoHeaders();
   RECLAMO_FILAS=filas;
   meta.textContent=filas.length.toLocaleString('es-AR')+' envíos con sobrecobro · '+sinMedida.toLocaleString('es-AR')+' ventas sin medidas (ignoradas)';
   document.getElementById('reclamo-total').textContent=fmt(total);
@@ -2280,6 +2286,17 @@ async function renderReclamo(){
   }).join(''):'<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
 }
 
+var RECLAMO_TH={fechaISO:'Fecha',nro:'N° venta',tipo:'Tipo',sku:'SKU',pub:'Publicación',cobrado:'Cobrado c/IVA',deberian:'Debería c/IVA',dif:'Diferencia',largo:'Largo',ancho:'Ancho',alto:'Alto',peso:'Peso'};
+function ordReclamo(col){
+  if(RECLAMO_ORD.col===col){RECLAMO_ORD.dir*=-1;}else{RECLAMO_ORD.col=col;RECLAMO_ORD.dir=1;}
+  renderReclamo();
+}
+function updateReclamoHeaders(){
+  Object.keys(RECLAMO_TH).forEach(function(c){
+    var th=document.getElementById('rth-'+c); if(!th) return;
+    th.innerHTML=RECLAMO_TH[c]+(RECLAMO_ORD.col===c?(RECLAMO_ORD.dir>0?' ↑':' ↓'):'');
+  });
+}
 function exportarReclamo(){
   if(!RECLAMO_FILAS||!RECLAMO_FILAS.length){alert('No hay datos para exportar.');return;}
   var aoa=[['Fecha','N° venta','Tipo','SKU','Publicación','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
