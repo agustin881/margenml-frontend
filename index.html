@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v4.1</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v4.2</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -1589,7 +1589,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v4.1';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v4.2';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -1627,8 +1627,8 @@ function kpis(datos){
   document.getElementById('k-c').textContent=est.critico.toLocaleString('es-AR');
   document.getElementById('k-p').textContent=est.perdida.toLocaleString('es-AR');
   // k-s eliminado del HTML (sin costo movido a botón de filtro)
-  document.getElementById('k-ca').textContent=VENTAS.filter(function(v){return v.estado==='cancelada';}).length.toLocaleString('es-AR');
-  document.getElementById('k-dev').textContent=VENTAS.filter(function(v){return v.estado==='devolucion';}).length.toLocaleString('es-AR');
+  document.getElementById('k-ca').textContent=VENTAS.filter(function(v){return v.estado==='cancelada'&&!(desde&&v.fechaISO&&v.fechaISO<desde)&&!(hasta&&v.fechaISO&&v.fechaISO>hasta);}).length.toLocaleString('es-AR');
+  document.getElementById('k-dev').textContent=VENTAS.filter(function(v){return v.estado==='devolucion'&&!(desde&&v.fechaISO&&v.fechaISO<desde)&&!(hasta&&v.fechaISO&&v.fechaISO>hasta);}).length.toLocaleString('es-AR');
   // ROI promedio
   var roisArr=cc.filter(function(v){return v.roi!=null;}).map(function(v){return v.roi;});
   var roiProm=roisArr.length?roisArr.reduce(function(a,b){return a+b;},0)/roisArr.length:0;
