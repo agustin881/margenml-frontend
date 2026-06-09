@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.3</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.4</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -281,13 +281,20 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
   </div>
   <div class="dash">
     <div id="tab-ventas">
+    <style>
+    .kpi-delta{font-size:11px;font-weight:700;margin-top:5px;display:none;line-height:1.1}
+    .kpi-delta.show{display:block}
+    .kpi-delta.up{color:var(--green)}
+    .kpi-delta.down{color:var(--red)}
+    #btn-comparar.active{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.12)}
+    </style>
     <!-- Renglón 1: Métricas financieras -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px" id="kpi-grid-el">
-      <div class="kpi clickable" id="kpi-todos" onclick="filtrarKpi('todos',this)"><div class="kpi-val" id="k-v">—</div><div class="kpi-label">Total ventas</div></div>
-      <div class="kpi"><div class="kpi-val" id="k-i">—</div><div class="kpi-label">Ingresos c/IVA</div></div>
-      <div class="kpi k-green"><div class="kpi-val" id="k-g">—</div><div class="kpi-label">Ganancia real</div></div>
-      <div class="kpi" id="k-mp"><div class="kpi-val" id="k-m">—</div><div class="kpi-label">Margen % (ganancia/venta)</div></div>
-      <div class="kpi k-green"><div class="kpi-val" id="k-roi-prom">—</div><div class="kpi-label">ROI</div></div>
+      <div class="kpi clickable" id="kpi-todos" onclick="filtrarKpi('todos',this)"><div class="kpi-val" id="k-v">—</div><div class="kpi-label">Total ventas</div><div class="kpi-delta" id="d-v"></div></div>
+      <div class="kpi"><div class="kpi-val" id="k-i">—</div><div class="kpi-label">Ingresos c/IVA</div><div class="kpi-delta" id="d-i"></div></div>
+      <div class="kpi k-green"><div class="kpi-val" id="k-g">—</div><div class="kpi-label">Ganancia real</div><div class="kpi-delta" id="d-g"></div></div>
+      <div class="kpi" id="k-mp"><div class="kpi-val" id="k-m">—</div><div class="kpi-label">Margen % (ganancia/venta)</div><div class="kpi-delta" id="d-m"></div></div>
+      <div class="kpi k-green"><div class="kpi-val" id="k-roi-prom">—</div><div class="kpi-label">ROI</div><div class="kpi-delta" id="d-r"></div></div>
     </div>
     <!-- Renglón 2: Estados de rentabilidad -->
     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:10px">
@@ -352,6 +359,13 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
           <input type="hidden" id="f-des">
           <input type="hidden" id="f-has">
         </div>
+        <button class="btn-sm" id="btn-comparar" onclick="toggleCompare()">📊 Comparar</button>
+        <span id="cmp-b" style="display:none;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text3)">vs Período B:</span>
+          <input type="date" id="b-des" onchange="renderCompare()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:12px;color-scheme:dark">
+          <span style="color:var(--text3)">→</span>
+          <input type="date" id="b-has" onchange="renderCompare()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:12px;color-scheme:dark">
+        </span>
         <button class="btn-sm" id="btn-inc" onclick="toggleInc()">⚠️ Comis. incompletas (<span id="cnt-inc">0</span>)</button>
         <button class="btn-sm" id="btn-sincosto" onclick="toggleSinCosto()">⚪ Sin costo (<span id="cnt-sincosto">0</span>)</button>
         <button class="btn-sm btn-export" onclick="exportar()">⬇️ Exportar Excel</button>
@@ -1491,7 +1505,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.3';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.4';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -1544,6 +1558,7 @@ function kpis(datos){
   var al=document.getElementById('alerta-p');
   if(est.perdida>0){al.style.display='block';al.textContent='⚠️ '+est.perdida.toLocaleString('es-AR')+' ventas a pérdida'+(hayF?' en el período seleccionado':' este mes')+'. Revisalas en Alertas.';}
   else{al.style.display='none';}
+  renderCompare();
 }
 
 function filtrar(){
@@ -1620,6 +1635,44 @@ function filtrarKpi(tipo, el) {
 }
 
 var KPI_FILTRO_ENTREGA = null;
+
+var CMP=false;
+function toggleCompare(){
+  CMP=!CMP;
+  document.getElementById('btn-comparar').classList.toggle('active',CMP);
+  document.getElementById('cmp-b').style.display=CMP?'inline-flex':'none';
+  renderCompare();
+}
+function enRangoCmp(f,d,h){ if(!f)return false; if(d&&f<d)return false; if(h&&f>h)return false; return true; }
+function aggPeriodo(d,h){
+  var base=VENTAS.filter(function(v){return enRangoCmp(v.fechaISO,d,h);});
+  var act=base.filter(function(v){return v.estado!=='cancelada'&&v.estado!=='devolucion';});
+  var cc=act.filter(function(v){return v.estado!=='sin_costo';});
+  var ti=cc.reduce(function(a,v){return a+(v.precioConIva||0);},0);
+  var tg=cc.reduce(function(a,v){return a+(v.gananciaReal||0);},0);
+  var mm=cc.filter(function(v){return v.margenPct!=null;}).map(function(v){return v.margenPct;});
+  var mp=mm.length?mm.reduce(function(a,b){return a+b;},0)/mm.length:0;
+  var rr=cc.filter(function(v){return v.roi!=null;}).map(function(v){return v.roi;});
+  var roi=rr.length?rr.reduce(function(a,b){return a+b;},0)/rr.length:0;
+  return {n:act.length,ti:ti,tg:tg,mp:mp,roi:roi};
+}
+function setDelta(id,a,b){
+  var e=document.getElementById(id); if(!e)return;
+  e.style.color='';
+  if(b===0||b==null){e.className='kpi-delta show'+(a>0?' up':'');e.textContent=(a>0?'▲ nuevo vs B':'— vs B');return;}
+  var ch=(a-b)/Math.abs(b)*100; var up=ch>=0;
+  e.className='kpi-delta show '+(up?'up':'down');
+  e.textContent=(up?'▲ ':'▼ ')+Math.abs(ch).toFixed(1)+'% vs B';
+}
+function renderCompare(){
+  var ids=['d-v','d-i','d-g','d-m','d-r'];
+  if(!CMP){ids.forEach(function(id){var e=document.getElementById(id);if(e){e.className='kpi-delta';e.textContent='';e.style.color='';}});return;}
+  var bd=document.getElementById('b-des').value, bh=document.getElementById('b-has').value;
+  if(!bd||!bh){ids.forEach(function(id){var e=document.getElementById(id);if(e){e.className='kpi-delta show';e.style.color='var(--text3)';e.textContent='elegí Período B';}});return;}
+  var A=aggPeriodo(document.getElementById('f-des').value,document.getElementById('f-has').value);
+  var B=aggPeriodo(bd,bh);
+  setDelta('d-v',A.n,B.n); setDelta('d-i',A.ti,B.ti); setDelta('d-g',A.tg,B.tg); setDelta('d-m',A.mp,B.mp); setDelta('d-r',A.roi,B.roi);
+}
 
 function hoyISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function filtrarHoy(){
