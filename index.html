@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v4.0</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v4.1</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -276,7 +276,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
       <div class="topbar-meta" id="tm">—</div>
-      <button class="btn-reset" onclick="resetear()">← Cargar nuevos</button>
+      
     </div>
   </div>
   <div class="dash">
@@ -1209,6 +1209,15 @@ function parseFecha(val){
   if(m2)return m2[3]+'-'+m2[2].padStart(2,'0')+'-'+m2[1].padStart(2,'0');
   return '';
 }
+function parseHora(val){
+  if(!val)return '';
+  var s=String(val);
+  if(s.indexOf('T')>-1){var d=new Date(s);if(!isNaN(d.getTime()))return d.toLocaleTimeString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit',hour12:false});}
+  return '';
+}
+function fmtFechaHora(v){
+  return fmtFecha(v.fechaISO)+((v&&v.hora)?' <span style="color:var(--text3);font-size:10px">'+v.hora+'</span>':'');
+}
 
 // Drag & Drop
 // Verificar token guardado al cargar
@@ -1437,6 +1446,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     var sku=String(row.sku||'').trim().toUpperCase();
     var nroVenta=row.nroVenta;
     var fechaISO=parseFecha(row.fechaVenta);
+    var hora=parseHora(row.fechaVenta);
     var titulo=String(row.titulo||'').substring(0,60);
     var ciudad=String(row.ciudad||'');
     var unidades=parseFloat(row.unidades)||1;
@@ -1474,7 +1484,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     if(esDevolucion){
       var totalARSraw = parseFloat(String(row.totalARS||'').replace(',','.')) || 0;
       res.push({
-        nroVenta:nroVenta, fechaISO:fechaISO, sku:sku, titulo:titulo, ciudad:ciudad,
+        nroVenta:nroVenta, fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
         unidades:Math.round(unidades), precioConIva:r2(precioConIva),
         gananciaReal:0,
         margenPct: null,
@@ -1487,7 +1497,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     }
 
     if(esCancelada){
-      res.push({nroVenta:nroVenta, fechaISO:fechaISO, sku:sku, titulo:titulo, ciudad:ciudad,
+      res.push({nroVenta:nroVenta, fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
         unidades:Math.round(unidades), precioConIva:r2(precioConIva),
         estadoML:row.estadoML||'Cancelada',
         estado:'cancelada', comisionIncompleta:false, margenPct:null});
@@ -1516,7 +1526,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     var prod=costos[sku];
     // Para paquetes: no requiere prod individual, el costo se suma de skusPaquete
     if(!prod && !row.esPaquete){
-      res.push({nroVenta:nroVenta,fechaISO:fechaISO,sku:sku,titulo:titulo,ciudad:ciudad,
+      res.push({nroVenta:nroVenta,fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
         unidades:Math.round(unidades),precioConIva:r2(precioConIva),formaEntrega:formaEntrega,esFlex:esFlex,
         estado:'sin_costo',comisionIncompleta:comisionIncomp,margenPct:null,
         conPublicidad:row.conPublicidad===true,
@@ -1546,7 +1556,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     var estado=margenPct>=30?'rentable':margenPct>=15?'ajustado':margenPct>=0?'critico':'perdida';
 
     res.push({
-      nroVenta:nroVenta,fechaISO:fechaISO,sku:sku,titulo:titulo,ciudad:ciudad,
+      nroVenta:nroVenta,fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
       unidades:Math.round(unidades),
       precioConIva:r2(precioConIva),precioNeto:r2(precioNeto),
       comisionNeta:r2(comisionNeta),envioNeto:r2(envioNeto),
@@ -1579,7 +1589,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v4.0';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v4.1';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -2075,11 +2085,11 @@ function renderTabla(){
     var inc=v.comisionIncompleta?' <span class="badge b-warn">⚠️comis.</span>':'';
     var flx=v.esFlex?' <span class="badge b-flex">🚚flex</span>':'';
     var paq=v.esPaquete?' <span class="badge" style="background:rgba(168,85,247,.1);color:#c084fc;border:1px solid rgba(168,85,247,.2);font-size:9px;padding:1px 5px">📦paq.</span>':'';
-    if(v.estado==='cancelada')return '<tr onclick="vD(\''+v.nroVenta+'\')" style="opacity:.55"><td>'+fmtFecha(v.fechaISO)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm" style="text-decoration:line-through">'+fmt(v.precioConIva)+'</td><td colspan="8" style="color:var(--text3);text-align:center;font-size:11px">'+v.estadoML+'</td><td><span class="badge b-cancelada">🚫 cancelada</span></td></tr>';
-    if(v.estado==='sin_costo')return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFecha(v.fechaISO)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td colspan="8" style="color:var(--text3);text-align:center;font-size:11px">Sin costo en Contabilium</td><td><span class="badge b-sin_costo">sin costo</span>'+flx+inc+'</td></tr>';
+    if(v.estado==='cancelada')return '<tr onclick="vD(\''+v.nroVenta+'\')" style="opacity:.55"><td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm" style="text-decoration:line-through">'+fmt(v.precioConIva)+'</td><td colspan="8" style="color:var(--text3);text-align:center;font-size:11px">'+v.estadoML+'</td><td><span class="badge b-cancelada">🚫 cancelada</span></td></tr>';
+    if(v.estado==='sin_costo')return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td colspan="8" style="color:var(--text3);text-align:center;font-size:11px">Sin costo en Contabilium</td><td><span class="badge b-sin_costo">sin costo</span>'+flx+inc+'</td></tr>';
     var col={rentable:'var(--green)',ajustado:'var(--yellow)',critico:'var(--orange)',perdida:'var(--red)'}[v.estado]||'var(--text)';
     var gcol=v.gananciaReal>=0?'var(--green)':'var(--red)';
-    return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFecha(v.fechaISO)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td class="tm">'+fmt(v.precioNeto)+'</td><td class="tm">'+fmt(v.costoProducto)+'</td><td class="tm">'+fmt(v.comisionNeta)+'</td><td class="tm">'+fmt(v.envioNeto)+'</td><td class="tm">'+fmt(v.publicidadNeta)+'</td><td class="tm">'+fmt(v.iibb)+'</td><td class="tm" style="font-weight:600;color:'+gcol+'">'+fmt(v.gananciaReal)+'</td><td class="tm" style="font-weight:700;color:'+col+'">'+fmtP(v.margenPct)+'</td><td class="tm" style="color:'+(v.roi==null?'var(--text3)':v.roi>=30?'var(--green)':v.roi>=15?'var(--yellow)':'var(--orange)')+'">'+  (v.roi==null?'—':v.roi.toFixed(1)+'%')+'</td><td><span class="badge b-'+v.estado+'">'+v.estado+'</span>'+flx+inc+'</td></tr>';
+    return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td class="tm">'+fmt(v.precioNeto)+'</td><td class="tm">'+fmt(v.costoProducto)+'</td><td class="tm">'+fmt(v.comisionNeta)+'</td><td class="tm">'+fmt(v.envioNeto)+'</td><td class="tm">'+fmt(v.publicidadNeta)+'</td><td class="tm">'+fmt(v.iibb)+'</td><td class="tm" style="font-weight:600;color:'+gcol+'">'+fmt(v.gananciaReal)+'</td><td class="tm" style="font-weight:700;color:'+col+'">'+fmtP(v.margenPct)+'</td><td class="tm" style="color:'+(v.roi==null?'var(--text3)':v.roi>=30?'var(--green)':v.roi>=15?'var(--yellow)':'var(--orange)')+'">'+  (v.roi==null?'—':v.roi.toFixed(1)+'%')+'</td><td><span class="badge b-'+v.estado+'">'+v.estado+'</span>'+flx+inc+'</td></tr>';
   }).join('');
   renderPag();
 }
@@ -2314,7 +2324,7 @@ function renderTop(){
 function renderAlertas(){
   var perdidas=VENTAS.filter(function(v){return v.estado==='perdida';});
   document.getElementById('cnt-p').textContent=perdidas.length+' ventas';
-  document.getElementById('ab').innerHTML=perdidas.slice(0,100).map(function(v){return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFecha(v.fechaISO)+'</td><td class="ts">'+v.sku+'</td><td class="tt">'+v.titulo.substring(0,36)+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td class="tm">'+fmt(v.costoProducto)+'</td><td class="tm">'+fmt(v.envioNeto)+'</td><td class="tm" style="color:var(--red);font-weight:600">'+fmt(v.gananciaReal)+'</td><td class="tm" style="color:var(--red);font-weight:700">'+fmtP(v.margenPct)+'</td></tr>';}).join('');
+  document.getElementById('ab').innerHTML=perdidas.slice(0,100).map(function(v){return '<tr onclick="vD(\''+v.nroVenta+'\')"><td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td><td class="tt">'+v.titulo.substring(0,36)+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td class="tm">'+fmt(v.costoProducto)+'</td><td class="tm">'+fmt(v.envioNeto)+'</td><td class="tm" style="color:var(--red);font-weight:600">'+fmt(v.gananciaReal)+'</td><td class="tm" style="color:var(--red);font-weight:700">'+fmtP(v.margenPct)+'</td></tr>';}).join('');
   var incomp=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';});
   document.getElementById('cb2').innerHTML=incomp.slice(0,50).map(function(v){return '<tr><td class="ts">'+v.nroVenta+'</td><td>'+v.fechaISO+'</td><td class="ts">'+v.sku+'</td><td class="tt">'+v.titulo.substring(0,36)+'</td><td class="tm">'+fmt(v.precioConIva)+'</td><td class="tm" style="color:var(--orange)">'+fmt(v.comisionNeta)+'</td></tr>';}).join('');
   var cancel=VENTAS.filter(function(v){return v.estado==='cancelada';});
@@ -2324,7 +2334,7 @@ function renderAlertas(){
   if(document.getElementById('dev-body')){
     document.getElementById('dev-body').innerHTML=(devols||[]).map(function(v){
       return '<tr onclick="vD(\''+v.nroVenta+'\')" style="background:rgba(244,63,94,.05)">'+
-        '<td>'+fmtFecha(v.fechaISO)+'</td><td class="ts">'+v.sku+'</td>'+
+        '<td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td>'+
         '<td class="tt">'+v.titulo.substring(0,36)+'</td>'+
         '<td class="tm">'+fmt(v.precioConIva)+'</td>'+
         '<td class="tm" style="color:var(--red);font-weight:700">'+fmt(v.gananciaReal)+'</td>'+
