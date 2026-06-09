@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.4</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.5</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -362,9 +362,36 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
         <button class="btn-sm" id="btn-comparar" onclick="toggleCompare()">📊 Comparar</button>
         <span id="cmp-b" style="display:none;align-items:center;gap:6px">
           <span style="font-size:11px;color:var(--text3)">vs Período B:</span>
-          <input type="date" id="b-des" onchange="renderCompare()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:12px;color-scheme:dark">
-          <span style="color:var(--text3)">→</span>
-          <input type="date" id="b-has" onchange="renderCompare()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:12px;color-scheme:dark">
+          <div style="position:relative">
+            <button class="btn-sm" id="btn-rango-fecha-b" onclick="toggleCalB(event)" style="min-width:170px;text-align:left">
+              📅 <span id="rango-label-b">Elegir período B</span>
+            </button>
+            <div id="cal-popup-b" style="display:none;position:absolute;top:36px;left:0;z-index:300;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:272px" onclick="event.stopPropagation()">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <button onclick="calNavB(-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8592;</button>
+                <span id="cal-titulo-b" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+                <button onclick="calNavB(1)"  style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8594;</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:6px">
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Do</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Lu</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ma</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Mi</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ju</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Vi</span>
+                <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Sa</span>
+              </div>
+              <div id="cal-grid-b" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px"></div>
+              <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:flex;gap:5px;flex-wrap:wrap">
+                <button onclick="setRapidoB(7)"  class="btn-sm" style="font-size:11px;padding:3px 8px">7 días</button>
+                <button onclick="setRapidoB(15)" class="btn-sm" style="font-size:11px;padding:3px 8px">15 días</button>
+                <button onclick="setRapidoB(30)" class="btn-sm" style="font-size:11px;padding:3px 8px">30 días</button>
+                <button onclick="limpiarB()"     class="btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--red);color:var(--red);margin-left:auto">✕ Limpiar</button>
+              </div>
+            </div>
+            <input type="hidden" id="b-des">
+            <input type="hidden" id="b-has">
+          </div>
         </span>
         <button class="btn-sm" id="btn-inc" onclick="toggleInc()">⚠️ Comis. incompletas (<span id="cnt-inc">0</span>)</button>
         <button class="btn-sm" id="btn-sincosto" onclick="toggleSinCosto()">⚪ Sin costo (<span id="cnt-sincosto">0</span>)</button>
@@ -1505,7 +1532,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.4';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.5';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -1801,6 +1828,87 @@ function fmtLbl(iso){
   var p=iso.split('-');
   var m=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   return p[2]+' '+m[parseInt(p[1])-1];
+}
+
+var CALB={anio:new Date().getFullYear(),mes:new Date().getMonth(),ini:null,fin:null,sel:false,datos:new Set()};
+function toggleCalB(e){
+  e.stopPropagation();
+  var p=document.getElementById('cal-popup-b');
+  if(p.style.display!=='none'){p.style.display='none';return;}
+  CALB.datos=new Set(VENTAS.filter(function(v){return v.fechaISO;}).map(function(v){return v.fechaISO;}));
+  if(CALB.datos.size){var f=Array.from(CALB.datos).sort()[0];CALB.anio=parseInt(f.substring(0,4));CALB.mes=parseInt(f.substring(5,7))-1;}
+  renderCalB();
+  p.style.display='block';
+  document.addEventListener('click',cierraCalFueraB);
+}
+function cierraCalFueraB(e){
+  var p=document.getElementById('cal-popup-b');
+  var b=document.getElementById('btn-rango-fecha-b');
+  if(!p.contains(e.target)&&!b.contains(e.target)){p.style.display='none';document.removeEventListener('click',cierraCalFueraB);}
+}
+function calNavB(d){
+  CALB.mes+=d;
+  if(CALB.mes>11){CALB.mes=0;CALB.anio++;}
+  if(CALB.mes<0){CALB.mes=11;CALB.anio--;}
+  renderCalB();
+}
+function renderCalB(){
+  document.getElementById('cal-titulo-b').textContent=MESES[CALB.mes]+' '+CALB.anio;
+  var primer=new Date(CALB.anio,CALB.mes,1).getDay();
+  var ultimo=new Date(CALB.anio,CALB.mes+1,0).getDate();
+  var hoy=new Date().toISOString().substring(0,10);
+  var html='';
+  for(var i=0;i<primer;i++) html+='<div></div>';
+  for(var d=1;d<=ultimo;d++){
+    var iso=CALB.anio+'-'+String(CALB.mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls='cd';
+    if(iso===hoy) cls+=' hoy';
+    if(iso===CALB.ini) cls+=' s1';
+    if(iso===CALB.fin) cls+=' s2';
+    if(CALB.ini&&CALB.fin&&iso>CALB.ini&&iso<CALB.fin) cls+=' rng';
+    if(!CALB.datos.has(iso)) cls+=' vacio';
+    html+='<div class="'+cls+'" data-iso="'+iso+'" onclick="diaClickB(\''+iso+'\')" onmouseenter="diaHoverB(\''+iso+'\')">'+d+'</div>';
+  }
+  document.getElementById('cal-grid-b').innerHTML=html;
+}
+function diaClickB(iso){
+  if(!CALB.ini||(!CALB.sel&&CALB.fin)){CALB.ini=iso;CALB.fin=null;CALB.sel=true;}
+  else if(CALB.sel){if(iso<CALB.ini){CALB.fin=CALB.ini;CALB.ini=iso;}else{CALB.fin=iso;}CALB.sel=false;aplicarRangoB();return;}
+  renderCalB();
+}
+function diaHoverB(iso){
+  if(!CALB.sel||!CALB.ini) return;
+  var dias=document.getElementById('cal-grid-b').querySelectorAll('.cd');
+  var des=CALB.ini<iso?CALB.ini:iso;
+  var has=CALB.ini<iso?iso:CALB.ini;
+  dias.forEach(function(el){var d=el.getAttribute('data-iso');if(!d)return;el.classList.remove('rng','s2');if(d>des&&d<has)el.classList.add('rng');if(d===has)el.classList.add('s2');});
+}
+function aplicarRangoB(){
+  document.getElementById('b-des').value=CALB.ini||'';
+  document.getElementById('b-has').value=CALB.fin||'';
+  var lbl='';
+  if(CALB.ini&&CALB.fin) lbl=fmtLbl(CALB.ini)+' → '+fmtLbl(CALB.fin);
+  else if(CALB.ini) lbl='Desde '+fmtLbl(CALB.ini);
+  document.getElementById('rango-label-b').textContent=lbl||'Elegir período B';
+  var b=document.getElementById('btn-rango-fecha-b');
+  b.style.borderColor=lbl?'var(--accent)':'';
+  b.style.color=lbl?'var(--accent)':'';
+  document.getElementById('cal-popup-b').style.display='none';
+  document.removeEventListener('click',cierraCalFueraB);
+  renderCompare();
+}
+function setRapidoB(dias){
+  var hoy=new Date();var des=new Date(hoy);des.setDate(hoy.getDate()-dias+1);
+  CALB.ini=des.toISOString().substring(0,10);CALB.fin=hoy.toISOString().substring(0,10);CALB.sel=false;
+  aplicarRangoB();
+}
+function limpiarB(){
+  document.getElementById('b-des').value='';document.getElementById('b-has').value='';
+  CALB.ini=null;CALB.fin=null;CALB.sel=false;
+  document.getElementById('rango-label-b').textContent='Elegir período B';
+  var b=document.getElementById('btn-rango-fecha-b');b.style.borderColor='';b.style.color='';
+  document.getElementById('cal-popup-b').style.display='none';
+  renderCompare();
 }
 
 function setRapido(dias){
