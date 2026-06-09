@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.6</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v3.7</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -429,6 +429,39 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
     </div>
 
     <div id="tab-graficos" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:12px;color:var(--text3);font-weight:600">Período de los gráficos:</span>
+        <div style="position:relative">
+          <button class="btn-sm" id="btn-rango-fecha-g" onclick="toggleCalG(event)" style="min-width:190px;text-align:left">
+            📅 <span id="rango-label-g">Todas las fechas</span>
+          </button>
+          <div id="cal-popup-g" style="display:none;position:absolute;top:36px;left:0;z-index:300;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:272px" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <button onclick="calNavG(-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8592;</button>
+              <span id="cal-titulo-g" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+              <button onclick="calNavG(1)"  style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:2px 8px;line-height:1">&#8594;</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:6px">
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Do</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Lu</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ma</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Mi</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Ju</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Vi</span>
+              <span style="text-align:center;font-size:10px;color:var(--text3);padding:3px">Sa</span>
+            </div>
+            <div id="cal-grid-g" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px"></div>
+            <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:flex;gap:5px;flex-wrap:wrap">
+              <button onclick="setRapidoG(7)"  class="btn-sm" style="font-size:11px;padding:3px 8px">7 días</button>
+              <button onclick="setRapidoG(15)" class="btn-sm" style="font-size:11px;padding:3px 8px">15 días</button>
+              <button onclick="setRapidoG(30)" class="btn-sm" style="font-size:11px;padding:3px 8px">30 días</button>
+              <button onclick="limpiarG()"     class="btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--accent);color:var(--accent);margin-left:auto">Todas</button>
+            </div>
+          </div>
+          <input type="hidden" id="g-des">
+          <input type="hidden" id="g-has">
+        </div>
+      </div>
 
 
 
@@ -1543,7 +1576,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.6';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v3.7';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -1920,6 +1953,87 @@ function limpiarB(){
   var b=document.getElementById('btn-rango-fecha-b');b.style.borderColor='';b.style.color='';
   document.getElementById('cal-popup-b').style.display='none';
   renderCompare();
+}
+
+var CALG={anio:new Date().getFullYear(),mes:new Date().getMonth(),ini:null,fin:null,sel:false,datos:new Set()};
+function toggleCalG(e){
+  e.stopPropagation();
+  var p=document.getElementById('cal-popup-g');
+  if(p.style.display!=='none'){p.style.display='none';return;}
+  CALG.datos=new Set(VENTAS.filter(function(v){return v.fechaISO;}).map(function(v){return v.fechaISO;}));
+  if(CALG.datos.size){var f=Array.from(CALG.datos).sort()[0];CALG.anio=parseInt(f.substring(0,4));CALG.mes=parseInt(f.substring(5,7))-1;}
+  renderCalG();
+  p.style.display='block';
+  document.addEventListener('click',cierraCalFueraG);
+}
+function cierraCalFueraG(e){
+  var p=document.getElementById('cal-popup-g');
+  var b=document.getElementById('btn-rango-fecha-g');
+  if(!p.contains(e.target)&&!b.contains(e.target)){p.style.display='none';document.removeEventListener('click',cierraCalFueraG);}
+}
+function calNavG(d){
+  CALG.mes+=d;
+  if(CALG.mes>11){CALG.mes=0;CALG.anio++;}
+  if(CALG.mes<0){CALG.mes=11;CALG.anio--;}
+  renderCalG();
+}
+function renderCalG(){
+  document.getElementById('cal-titulo-g').textContent=MESES[CALG.mes]+' '+CALG.anio;
+  var primer=new Date(CALG.anio,CALG.mes,1).getDay();
+  var ultimo=new Date(CALG.anio,CALG.mes+1,0).getDate();
+  var hoy=new Date().toISOString().substring(0,10);
+  var html='';
+  for(var i=0;i<primer;i++) html+='<div></div>';
+  for(var d=1;d<=ultimo;d++){
+    var iso=CALG.anio+'-'+String(CALG.mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls='cd';
+    if(iso===hoy) cls+=' hoy';
+    if(iso===CALG.ini) cls+=' s1';
+    if(iso===CALG.fin) cls+=' s2';
+    if(CALG.ini&&CALG.fin&&iso>CALG.ini&&iso<CALG.fin) cls+=' rng';
+    if(!CALG.datos.has(iso)) cls+=' vacio';
+    html+='<div class="'+cls+'" data-iso="'+iso+'" onclick="diaClickG(\''+iso+'\')" onmouseenter="diaHoverG(\''+iso+'\')">'+d+'</div>';
+  }
+  document.getElementById('cal-grid-g').innerHTML=html;
+}
+function diaClickG(iso){
+  if(!CALG.ini||(!CALG.sel&&CALG.fin)){CALG.ini=iso;CALG.fin=null;CALG.sel=true;}
+  else if(CALG.sel){if(iso<CALG.ini){CALG.fin=CALG.ini;CALG.ini=iso;}else{CALG.fin=iso;}CALG.sel=false;aplicarRangoG();return;}
+  renderCalG();
+}
+function diaHoverG(iso){
+  if(!CALG.sel||!CALG.ini) return;
+  var dias=document.getElementById('cal-grid-g').querySelectorAll('.cd');
+  var des=CALG.ini<iso?CALG.ini:iso;
+  var has=CALG.ini<iso?iso:CALG.ini;
+  dias.forEach(function(el){var d=el.getAttribute('data-iso');if(!d)return;el.classList.remove('rng','s2');if(d>des&&d<has)el.classList.add('rng');if(d===has)el.classList.add('s2');});
+}
+function aplicarRangoG(){
+  document.getElementById('g-des').value=CALG.ini||'';
+  document.getElementById('g-has').value=CALG.fin||'';
+  var lbl='';
+  if(CALG.ini&&CALG.fin) lbl=fmtLbl(CALG.ini)+' → '+fmtLbl(CALG.fin);
+  else if(CALG.ini) lbl='Desde '+fmtLbl(CALG.ini);
+  document.getElementById('rango-label-g').textContent=lbl||'Todas las fechas';
+  var b=document.getElementById('btn-rango-fecha-g');
+  b.style.borderColor=lbl?'var(--accent)':'';
+  b.style.color=lbl?'var(--accent)':'';
+  document.getElementById('cal-popup-g').style.display='none';
+  document.removeEventListener('click',cierraCalFueraG);
+  renderGraficos();
+}
+function setRapidoG(dias){
+  var hoy=new Date();var des=new Date(hoy);des.setDate(hoy.getDate()-dias+1);
+  CALG.ini=des.toISOString().substring(0,10);CALG.fin=hoy.toISOString().substring(0,10);CALG.sel=false;
+  aplicarRangoG();
+}
+function limpiarG(){
+  document.getElementById('g-des').value='';document.getElementById('g-has').value='';
+  CALG.ini=null;CALG.fin=null;CALG.sel=false;
+  document.getElementById('rango-label-g').textContent='Todas las fechas';
+  var b=document.getElementById('btn-rango-fecha-g');b.style.borderColor='';b.style.color='';
+  document.getElementById('cal-popup-g').style.display='none';
+  renderGraficos();
 }
 
 function setRapido(dias){
@@ -2348,7 +2462,9 @@ function initKpiDnD(){
 }
 
 function renderGraficos(){
-  var FILT = VENTAS; // los gráficos siempre muestran TODAS las ventas, sin el filtro de fecha
+  var gd=(document.getElementById('g-des')||{}).value||'';
+  var gh=(document.getElementById('g-has')||{}).value||'';
+  var FILT = VENTAS.filter(function(v){ if(gd&&v.fechaISO&&v.fechaISO<gd)return false; if(gh&&v.fechaISO&&v.fechaISO>gh)return false; return true; }); // gráficos: rango propio (vacío = todas)
   var datos = FILT.filter(function(v){return v.estado!=='cancelada'&&v.margenPct!=null;});
   if(!datos.length) return;
   var total=datos.length;
