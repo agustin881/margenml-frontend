@@ -264,7 +264,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.4</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.5</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -883,7 +883,7 @@ async function cargarVentasML(){
       DML = backendData.ventas.map(function(v){
         return {
           nroVenta:     v.nro_venta,
-          fechaVenta:   v.fecha,
+          fechaVenta:   v.fecha_cierre||v.fecha,
           itemId:       v.item_id||(v.raw&&v.raw.order_items&&v.raw.order_items[0]&&v.raw.order_items[0].item&&v.raw.order_items[0].item.id)||'',
           unidades:     v.unidades||1,
           ingresos:     v.precio,
@@ -1043,7 +1043,7 @@ async function cargarVentasML(){
 
       return {
         nroVenta:     String(o.id),
-        fechaVenta:   o.date_created,
+        fechaVenta:   o.date_closed||o.date_created,
         itemId:       (o.order_items&&o.order_items[0]&&o.order_items[0].item&&o.order_items[0].item.id)||'',
         unidades:     item.quantity||1,
         ingresos:     o.total_amount,
@@ -1674,7 +1674,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.4';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.5';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
