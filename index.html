@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.7</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.8</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -950,7 +950,7 @@ async function cargarVentasML(){
   try {
     // Intentar cargar desde el backend (Supabase) primero
     var desde = new Date();
-    desde.setMonth(4, 1);            // 1 de mayo (enero=0, mayo=4) -> trae mayo + junio
+    desde.setMonth(0, 1);            // 1 de enero -> trae todo el anio (enero a hoy)
     desde.setHours(0, 0, 0, 0);
     var desdeISO = desde.toISOString();
     var backendResp = await fetch(BACKEND_URL+'/api/ventas?user_id='+ML_USER_ID+'&desde='+desdeISO, {headers: await authHeaders()});
@@ -996,7 +996,7 @@ async function cargarVentasML(){
         };
       }).filter(function(r){ return r.sku && r.sku.trim()!==''; });
 
-      document.getElementById('fn-ml').textContent = '✅ Backend · '+DML.length.toLocaleString('es-AR')+' ventas (últimos 7 días)';
+      document.getElementById('fn-ml').textContent = '✅ Backend · '+DML.length.toLocaleString('es-AR')+' ventas (desde enero)';
       document.getElementById('card-ml').classList.add('loaded');
       document.getElementById('check-ml').style.display = 'inline';
       btn.textContent = '✅ '+DML.length.toLocaleString('es-AR')+' ventas cargadas';
@@ -1767,7 +1767,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.7';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.8';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
