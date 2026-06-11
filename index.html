@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.6</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.7</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -831,6 +831,41 @@ async function hacerLogin(){
   }catch(e){ if(m) m.textContent='Error de conexion. Reintenta.'; if(btn) btn.textContent='Entrar'; }
 }
 async function cerrarSesion(){ try{ await getSb().auth.signOut(); }catch(e){} location.reload(); }
+async function cargarHistoricoCMV(){
+  var inp=document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls';
+  inp.onchange=function(){
+    var file=inp.files&&inp.files[0]; if(!file) return;
+    var btn=document.getElementById('btn-hist'); if(btn){ btn.textContent='Procesando...'; btn.disabled=true; }
+    var reader=new FileReader();
+    reader.onload=async function(e){
+      try{
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var raw=XLSX.utils.sheet_to_json(ws,{defval:null,raw:true});
+        var rows=[];
+        raw.forEach(function(r){
+          var sku=r['Codigo'], costo=r['Costo'], pu=r['Precio Unitario'];
+          if(sku==null||costo==null||pu==null) return;
+          var fch=r['Fecha'], iso=null;
+          if(fch instanceof Date) iso=fch.toISOString();
+          else if(typeof fch==='string'){ var p=fch.split('/'); if(p.length===3) iso=new Date(+p[2],+p[1]-1,+p[0]).toISOString(); }
+          rows.push({sku:String(sku).trim(), precioUnit:pu, iva:r['Iva']||0, costo:costo, cantidad:r['Cantidad']||1, fecha:iso});
+        });
+        if(!rows.length){ alert('No se pudieron leer filas del Excel (revisa que sea el CMV).'); }
+        else{
+          var h=await authHeaders(); h['Content-Type']='application/json';
+          var resp=await fetch(BACKEND_URL+'/api/costos/backfill',{method:'POST',headers:h,body:JSON.stringify({user_id:ML_USER_ID||'67619515',rows:rows})});
+          var d=await resp.json();
+          if(d.error) alert('Error: '+d.error);
+          else alert('Historico cargado:\n'+d.actualizadas+' ventas con costo ('+d.exacto+' exactas, '+d.aprox+' aproximadas)\n'+d.sin+' sin costo (SKU no estaba en el CMV)\n\nRecarga la pagina para ver los margenes.');
+        }
+      }catch(err){ alert('Error procesando: '+err.message); }
+      if(btn){ btn.textContent='Cargar CMV historico'; btn.disabled=false; }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  inp.click();
+}
 
 
 // ── MERCADOLIBRE OAuth ───────────────────────────────────────────
@@ -927,6 +962,7 @@ async function cargarVentasML(){
         return {
           nroVenta:     v.nro_venta,
           fechaVenta:   v.fecha_cierre||v.fecha,
+          costoCongelado: (v.costo_congelado!=null?Number(v.costo_congelado):0),
           itemId:       v.item_id||(v.raw&&v.raw.order_items&&v.raw.order_items[0]&&v.raw.order_items[0].item&&v.raw.order_items[0].item.id)||'',
           unidades:     v.unidades||1,
           ingresos:     v.precio,
@@ -1363,6 +1399,7 @@ window.addEventListener('load', function(){
 
 function initDashboard(){
   if(!document.getElementById('btn-logout')){ var lb=document.createElement('button'); lb.id='btn-logout'; lb.textContent='Salir'; lb.style.cssText='position:fixed;top:8px;right:10px;z-index:9000;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer'; lb.onclick=cerrarSesion; document.body.appendChild(lb); }
+  if(!document.getElementById('btn-hist')){ var hb=document.createElement('button'); hb.id='btn-hist'; hb.textContent='Cargar CMV historico'; hb.style.cssText='position:fixed;top:8px;right:74px;z-index:9000;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer'; hb.onclick=cargarHistoricoCMV; document.body.appendChild(hb); }
   var tokenGuardado = localStorage.getItem('ml_token');
   var tokenExp      = localStorage.getItem('ml_token_exp');
   if(tokenGuardado && tokenExp && Date.now() < parseInt(tokenExp)){
@@ -1664,7 +1701,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
 
     var prod=costos[sku];
     // Para paquetes: no requiere prod individual, el costo se suma de skusPaquete
-    if(!prod && !row.esPaquete){
+    if(!prod && !row.esPaquete && !(row.costoCongelado>0)){
       res.push({nroVenta:nroVenta,fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
         unidades:Math.round(unidades),precioConIva:r2(precioConIva),formaEntrega:formaEntrega,esFlex:esFlex,
         estado:'sin_costo',comisionIncompleta:comisionIncomp,margenPct:null,
@@ -1688,6 +1725,8 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     } else {
       costoProducto=prod?prod.costo*unidades:0;
     }
+    // Costo congelado guardado en la base (costo real de esa venta) tiene prioridad
+    if(row.costoCongelado>0){ costoProducto=row.costoCongelado; }
     var provincia=extractProvincia(row.direccion, row.provincia);
     var iibb=getIibb(provincia, precioNeto);
     var gananciaReal=precioNeto-comisionNeta-envioNeto-publicidadNeta-costoProducto-iibb;
@@ -1728,7 +1767,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.6';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.7';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
