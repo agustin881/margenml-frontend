@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.8</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.9</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -961,6 +961,7 @@ async function cargarVentasML(){
       DML = backendData.ventas.map(function(v){
         return {
           nroVenta:     v.nro_venta,
+          packId:       v.pack_id||'',
           fechaVenta:   v.fecha_cierre||v.fecha,
           costoCongelado: (v.costo_congelado!=null?Number(v.costo_congelado):0),
           itemId:       v.item_id||(v.raw&&v.raw.order_items&&v.raw.order_items[0]&&v.raw.order_items[0].item&&v.raw.order_items[0].item.id)||'',
@@ -1615,6 +1616,25 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
   prog(30,'Procesando ventas...');
   await sleep(10);
 
+  // Reparto de envio en carritos (packs con varios productos) proporcional al precio
+  var _packs={};
+  for(var pi=0;pi<DML.length;pi++){
+    var _pr=DML[pi]; var _pid=_pr.packId;
+    if(!_pid) continue;
+    if(!_packs[_pid]) _packs[_pid]={rows:[],tp:0,te:0};
+    var _prc=parseFloat(_pr.ingresos)||0;
+    var _env=Math.max(0,Math.abs(parseFloat(_pr.costoEnvio)||0)-(parseFloat(_pr.ingresoEnvio)||0));
+    _packs[_pid].rows.push(_pr); _packs[_pid].tp+=_prc; _packs[_pid].te+=_env;
+  }
+  Object.keys(_packs).forEach(function(_pid){
+    var _p=_packs[_pid]; if(_p.rows.length<2) return;
+    _p.rows.forEach(function(_pr){
+      var _prc=parseFloat(_pr.ingresos)||0;
+      var _frac=_p.tp>0?_prc/_p.tp:1/_p.rows.length;
+      _pr.envioPackBruto=_p.te*_frac;
+    });
+  });
+
   var res=[];
   for(var i=0;i<DML.length;i++){
     if(i%500===0){prog(30+Math.round(i/DML.length*60),'Procesando '+i.toLocaleString('es-AR')+' de '+DML.length.toLocaleString('es-AR')+'...');await sleep(0);}
@@ -1660,7 +1680,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     if(esDevolucion){
       var totalARSraw = parseFloat(String(row.totalARS||'').replace(',','.')) || 0;
       res.push({
-        nroVenta:nroVenta, fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
+        nroVenta:nroVenta,packId:(row.packId||''), fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
         unidades:Math.round(unidades), precioConIva:r2(precioConIva),
         gananciaReal:0,
         margenPct: null,
@@ -1673,7 +1693,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     }
 
     if(esCancelada){
-      res.push({nroVenta:nroVenta, fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
+      res.push({nroVenta:nroVenta,packId:(row.packId||''), fechaISO:fechaISO,hora:hora, sku:sku, titulo:titulo, ciudad:ciudad,
         unidades:Math.round(unidades), precioConIva:r2(precioConIva),
         estadoML:row.estadoML||'Cancelada',
         estado:'cancelada', comisionIncompleta:false, margenPct:null});
@@ -1694,15 +1714,19 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
       ingresoEnvio=totalIngresoEnvioConIva/1.21;
       envioNeto=Math.max(0,costoEnvioBruto-ingresoEnvio);
     }else{
-      costoEnvioBruto=Math.abs(parseFloat(row.costoEnvio)||0);
-      ingresoEnvio=parseFloat(row.ingresoEnvio)||0;
-      envioNeto=Math.max(0,costoEnvioBruto-ingresoEnvio)/1.21;
+      if(row.envioPackBruto!=null){
+        envioNeto=row.envioPackBruto/1.21;
+      }else{
+        costoEnvioBruto=Math.abs(parseFloat(row.costoEnvio)||0);
+        ingresoEnvio=parseFloat(row.ingresoEnvio)||0;
+        envioNeto=Math.max(0,costoEnvioBruto-ingresoEnvio)/1.21;
+      }
     }
 
     var prod=costos[sku];
     // Para paquetes: no requiere prod individual, el costo se suma de skusPaquete
     if(!prod && !row.esPaquete && !(row.costoCongelado>0)){
-      res.push({nroVenta:nroVenta,fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
+      res.push({nroVenta:nroVenta,packId:(row.packId||''),fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
         unidades:Math.round(unidades),precioConIva:r2(precioConIva),formaEntrega:formaEntrega,esFlex:esFlex,
         estado:'sin_costo',comisionIncompleta:comisionIncomp,margenPct:null,
         conPublicidad:row.conPublicidad===true,
@@ -1734,7 +1758,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     var estado=margenPct>=30?'rentable':margenPct>=15?'ajustado':margenPct>=0?'critico':'perdida';
 
     res.push({
-      nroVenta:nroVenta,fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
+      nroVenta:nroVenta,packId:(row.packId||''),fechaISO:fechaISO,hora:hora,sku:sku,titulo:titulo,ciudad:ciudad,
       unidades:Math.round(unidades),
       precioConIva:r2(precioConIva),precioNeto:r2(precioNeto),
       comisionNeta:r2(comisionNeta),envioNeto:r2(envioNeto),
@@ -1767,7 +1791,7 @@ function prog(pct,label){
 function mostrarDash(){
   document.getElementById('screen-upload').style.display='none';
   document.getElementById('screen-dashboard').style.display='block';
-  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.8';
+  document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.9';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
   filtrarHoy();
@@ -1837,7 +1861,7 @@ function filtrar(){
     }
     if(v.estado==='devolucion'){
       if(est&&est!=='devolucion') return false;
-      if(bus&&!v.sku.toLowerCase().includes(bus)&&!(v.titulo||'').toLowerCase().includes(bus)&&!v.nroVenta.includes(bus)) return false;
+      if(bus&&!v.sku.toLowerCase().includes(bus)&&!(v.titulo||'').toLowerCase().includes(bus)&&!v.nroVenta.includes(bus)&&!(v.packId||'').includes(bus)) return false;
       if(des&&v.fechaISO&&v.fechaISO<des) return false;
       if(has&&v.fechaISO&&v.fechaISO>has) return false;
       return est===''||est==='devolucion';
@@ -1845,7 +1869,7 @@ function filtrar(){
     if(SOLOINCMP&&!v.comisionIncompleta)return false;
     if(SOLOSINCOSTO&&v.estado!=='sin_costo')return false;
     if(est&&v.estado!==est)return false;
-    if(bus&&!v.sku.toLowerCase().includes(bus)&&!(v.titulo||'').toLowerCase().includes(bus)&&!v.nroVenta.includes(bus))return false;
+    if(bus&&!v.sku.toLowerCase().includes(bus)&&!(v.titulo||'').toLowerCase().includes(bus)&&!v.nroVenta.includes(bus)&&!(v.packId||'').includes(bus))return false;
     if(des&&v.fechaISO&&v.fechaISO<des)return false;
     if(has&&v.fechaISO&&v.fechaISO>has)return false;
     // Filtro de KPI por tipo de entrega
@@ -2814,7 +2838,7 @@ function vD(id){
   }
   if(v.estado==='cancelada'){
     b='<div class="mr"><span class="ml2">SKU</span><span class="mv ts">'+v.sku+'</span></div>';
-    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';
+    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
     b+='<div class="mr"><span class="ml2">Fecha</span><span class="mv">'+v.fechaISO+'</span></div>';
     b+='<div class="mr"><span class="ml2">Precio original</span><span class="mv" style="text-decoration:line-through;color:var(--text3)">'+fmt(v.precioConIva)+'</span></div>';
     b+='<div class="mr"><span class="ml2">Motivo</span><span class="mv" style="color:var(--yellow);font-size:12px">'+v.estadoML+'</span></div>';
@@ -2828,7 +2852,7 @@ function vD(id){
     var div=v.ivaProducto==10.5?'1.105':'1.21';
     var envDet=v.esFlex?' <span style="color:#38bdf8;font-size:11px">🚚 Flex · Costo: '+fmt(v.costoEnvioBruto)+' s/IVA · Ingreso cliente+ML: '+fmt(v.ingresoEnvio)+'</span>':'';
     b='<div class="mr"><span class="ml2">SKU</span><span class="mv ts">'+v.sku+'</span></div>';
-    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';
+    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
     b+='<div class="mr"><span class="ml2">Fecha</span><span class="mv">'+v.fechaISO+'</span></div>';
     b+='<div class="mr"><span class="ml2">Ciudad</span><span class="mv">'+(v.ciudad||'—')+'</span></div>';
     b+='<div class="mr"><span class="ml2">Provincia (IIBB)</span><span class="mv">'+(v.provincia||'—')+'</span></div>';
