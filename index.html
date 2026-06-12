@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v5.9</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.0</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -941,7 +941,14 @@ function mostrarBotonML(){
   }
 }
 
-async function cargarVentasML(){
+var LOADED_DESDE='';
+var RANGO_PENDIENTE=false;
+function mostrarCargando(on){
+  var t=document.getElementById('toast-cargando');
+  if(!t){ t=document.createElement('div'); t.id='toast-cargando'; t.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 18px;border-radius:8px;z-index:99999;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25)'; t.textContent='\u23f3 Cargando ventas\u2026'; document.body.appendChild(t); }
+  t.style.display = on?'block':'none';
+}
+async function cargarVentasML(desdeArg){
   if(!ML_USER_ID){ ML_USER_ID='67619515'; }
   var btn = document.getElementById('btn-ml-connect');
   btn.textContent = '⏳ Cargando ventas...';
@@ -949,11 +956,14 @@ async function cargarVentasML(){
 
   try {
     // Intentar cargar desde el backend (Supabase) primero
-    var desde = new Date();
-    desde.setMonth(0, 1);            // 1 de enero -> trae todo el anio (enero a hoy)
+    var desde;
+    if(desdeArg){ desde = new Date(desdeArg+'T00:00:00'); }
+    else { desde = new Date(); desde.setDate(desde.getDate()-5); }   // ultimos 5 dias por defecto
     desde.setHours(0, 0, 0, 0);
     var desdeISO = desde.toISOString();
+    LOADED_DESDE = desdeISO.substring(0,10);
     var backendResp = await fetch(BACKEND_URL+'/api/ventas?user_id='+ML_USER_ID+'&desde='+desdeISO, {headers: await authHeaders()});
+    if(backendResp.status===401){ btn.disabled=false; mostrarCargando(false); mostrarLogin('Tu sesion expiro, ingresa de nuevo.'); return; }
     var backendData = await backendResp.json();
 
     if(backendData.ventas && backendData.ventas.length > 0){
@@ -997,7 +1007,7 @@ async function cargarVentasML(){
         };
       }).filter(function(r){ return r.sku && r.sku.trim()!==''; });
 
-      document.getElementById('fn-ml').textContent = '✅ Backend · '+DML.length.toLocaleString('es-AR')+' ventas (desde enero)';
+      document.getElementById('fn-ml').textContent = '✅ Backend · '+DML.length.toLocaleString('es-AR')+' ventas';
       document.getElementById('card-ml').classList.add('loaded');
       document.getElementById('check-ml').style.display = 'inline';
       btn.textContent = '✅ '+DML.length.toLocaleString('es-AR')+' ventas cargadas';
@@ -1794,7 +1804,9 @@ function mostrarDash(){
   document.getElementById('tm').textContent=VENTAS.length.toLocaleString('es-AR')+' ventas · IIBB '+document.getElementById('cfg-iibb').value+'% · Pub '+document.getElementById('cfg-pub').value+'% · Flex $'+document.getElementById('cfg-flex').value+' · v5.9';
   document.getElementById('cnt-inc').textContent=VENTAS.filter(function(v){return v.comisionIncompleta&&v.estado!=='cancelada';}).length;
   document.getElementById('cnt-sincosto').textContent=VENTAS.filter(function(v){return v.estado==='sin_costo';}).length;
-  filtrarHoy();
+  mostrarCargando(false);
+  if(RANGO_PENDIENTE){ RANGO_PENDIENTE=false; filtrar(); }
+  else { filtrarHoy(); }
   renderTop();
   renderAlertas();
   setTimeout(initKpiDnD, 100);
@@ -1820,7 +1832,7 @@ function kpis(datos){
   var hayF=desde||hasta||bus||estF;
   var totalAct=VENTAS.filter(function(v){return v.estado!=='cancelada';}).length;
 
-  document.getElementById('k-v').textContent=act.length.toLocaleString('es-AR')+(hayF&&act.length<totalAct?' / '+totalAct.toLocaleString('es-AR'):'');
+  document.getElementById('k-v').textContent=act.length.toLocaleString('es-AR');
   document.getElementById('k-i').textContent=fmt(ti);
   document.getElementById('k-g').textContent=fmt(tg);
   document.getElementById('k-m').textContent=fmtP(mp);
@@ -1831,10 +1843,10 @@ function kpis(datos){
   // k-s eliminado del HTML (sin costo movido a botón de filtro)
   document.getElementById('k-ca').textContent=VENTAS.filter(function(v){return v.estado==='cancelada'&&!(desde&&v.fechaISO&&v.fechaISO<desde)&&!(hasta&&v.fechaISO&&v.fechaISO>hasta);}).length.toLocaleString('es-AR');
   document.getElementById('k-dev').textContent=VENTAS.filter(function(v){return v.estado==='devolucion'&&!(desde&&v.fechaISO&&v.fechaISO<desde)&&!(hasta&&v.fechaISO&&v.fechaISO>hasta);}).length.toLocaleString('es-AR');
-  // ROI promedio
-  var roisArr=cc.filter(function(v){return v.roi!=null;}).map(function(v){return v.roi;});
-  var roiProm=roisArr.length?roisArr.reduce(function(a,b){return a+b;},0)/roisArr.length:0;
-  document.getElementById('k-roi-prom').textContent=roiProm.toFixed(1)+'%';
+  // ROI agregado = ganancia total / costo total
+  var tcRoi=cc.reduce(function(a,v){return a+(v.costoProducto||0);},0);
+  var roiGlobal=tcRoi>0?(tg/tcRoi*100):0;
+  document.getElementById('k-roi-prom').textContent=roiGlobal.toFixed(1)+'%';
   document.getElementById('k-f').textContent=flex.length.toLocaleString('es-AR');
   document.getElementById('k-full-el').textContent=act.filter(function(v){return String(v.formaEntrega||'').toLowerCase().includes('full');}).length.toLocaleString('es-AR');
   document.getElementById('k-colecta-el').textContent=act.filter(function(v){return String(v.formaEntrega||'').toLowerCase().includes('colecta');}).length.toLocaleString('es-AR');
@@ -2087,6 +2099,12 @@ function aplicarRango(){
   b.style.color=lbl?'var(--accent)':'';
   document.getElementById('cal-popup').style.display='none';
   document.removeEventListener('click',cierraCalFuera);
+  if(CAL.ini && LOADED_DESDE && CAL.ini < LOADED_DESDE){
+    RANGO_PENDIENTE=true;
+    mostrarCargando(true);
+    cargarVentasML(CAL.ini);
+    return;
+  }
   filtrar();
 }
 
