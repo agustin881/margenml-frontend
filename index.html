@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.0</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.1</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -1872,6 +1872,8 @@ function filtrar(){
       return true;
     }
     if(v.estado==='devolucion'){
+      if(SOLOSINCOSTO) return false;   // las devoluciones no son "sin costo"
+      if(SOLOINCMP) return false;      // ni comision incompleta
       if(est&&est!=='devolucion') return false;
       if(bus&&!v.sku.toLowerCase().includes(bus)&&!(v.titulo||'').toLowerCase().includes(bus)&&!v.nroVenta.includes(bus)&&!(v.packId||'').includes(bus)) return false;
       if(des&&v.fechaISO&&v.fechaISO<des) return false;
