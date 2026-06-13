@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.2</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.3</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -1719,7 +1719,7 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
     var envioNeto=0,ingresoEnvio=0,costoEnvioBruto=0,acrediML=0;
     if(esFlex){
       var ingresoEnvioCliente=parseFloat(row.ingresoEnvio)||0;
-      acrediML=parseFloat(row.descBonif)||0;
+      acrediML=Math.max(0,(Math.abs(parseFloat(row.costoEnvio)||0))-ingresoEnvioCliente);
       var totalIngresoEnvioConIva=ingresoEnvioCliente+acrediML;
       costoEnvioBruto=FLEX;
       ingresoEnvio=totalIngresoEnvioConIva/1.21;
