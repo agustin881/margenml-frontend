@@ -1628,8 +1628,9 @@ console.log('🔍 DEBUG →','costos:',Object.keys(costos).length,'| codigo Cont
 
   // Reparto de envio en carritos (packs con varios productos) proporcional al precio
   var _packs={};
+  var _ps=DML.filter(function(r){return r.packId;}).map(function(r){return parseFloat(String(r.packId));}).sort(function(a,b){return a-b;});var _PB={},_pk=null,_pp=null;_ps.forEach(function(n){if(_pp===null||n-_pp>10)_pk=n;_PB[n]=_pk;_pp=n;});
   for(var pi=0;pi<DML.length;pi++){
-    var _pr=DML[pi]; var _pid=_pr.packId;
+    var _pr=DML[pi]; var _pid=_pr.packId?_PB[parseFloat(String(_pr.packId))]:0;
     if(!_pid) continue;
     if(!_packs[_pid]) _packs[_pid]={rows:[],tp:0,te:0};
     var _prc=parseFloat(_pr.ingresos)||0;
@@ -2547,7 +2548,7 @@ function renderTabla(){
   document.getElementById('info-p').textContent=(ini+1).toLocaleString('es-AR')+'–'+Math.min(ini+PPP,FILT.length).toLocaleString('es-AR')+' de '+FILT.length.toLocaleString('es-AR')+' ventas'+extra;
 
   document.getElementById('tb').innerHTML=pag.map(function(v){
-    var inc=v.comisionIncompleta?' <span class="badge b-warn">⚠️comis.</span>':'';
+    var inc=(v.comisionIncompleta?' <span class="badge b-warn">⚠️comis.</span>':'')+((v.formaEntrega&&v.formaEntrega.toLowerCase().indexOf('colecta')>-1&&v.unidades>0&&(v.precioConIva/v.unidades)>33000&&v.envioNeto<1)?' <span class="badge b-warn">⚠️envío</span>':'');
     var flx=v.esFlex?' <span class="badge b-flex">🚚flex</span>':'';
     var paq=v.esPaquete?' <span class="badge" style="background:rgba(168,85,247,.1);color:#c084fc;border:1px solid rgba(168,85,247,.2);font-size:9px;padding:1px 5px">📦paq.</span>':'';
     if(v.estado==='cancelada')return '<tr onclick="vD(\''+v.nroVenta+'\')" style="opacity:.55"><td>'+fmtFechaHora(v)+'</td><td class="ts">'+v.sku+'</td><td class="tt" title="'+v.titulo+'">'+v.titulo+'</td><td>'+v.unidades+'</td><td class="tm" style="text-decoration:line-through">'+fmt(v.precioConIva)+'</td><td colspan="8" style="color:var(--text3);text-align:center;font-size:11px">'+v.estadoML+'</td><td><span class="badge b-cancelada">🚫 cancelada</span></td></tr>';
