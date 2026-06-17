@@ -144,7 +144,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 .cd.s2{background:var(--accent)!important;color:#fff!important;border-radius:0 6px 6px 0}
 .cd.s1.s2{border-radius:6px}
 .cd.rng{background:rgba(79,124,255,.18);color:var(--text);border-radius:0}
-.cd.vacio{opacity:.25;pointer-events:none}
+.cd.vacio{opacity:.4}
 .iibb-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:6px;padding:5px 10px;font-size:12px}
 .iibb-row span{color:var(--text2)}
 .iibb-row input{width:60px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;text-align:right}
@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.3</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.5</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -958,7 +958,7 @@ async function cargarVentasML(desdeArg){
     // Intentar cargar desde el backend (Supabase) primero
     var desde;
     if(desdeArg){ desde = new Date(desdeArg+'T00:00:00'); }
-    else { desde = new Date(); desde.setDate(desde.getDate()-5); }   // ultimos 5 dias por defecto
+    else { desde = new Date(); desde.setDate(desde.getDate()-7); }   // ultima semana (7 dias) por defecto
     desde.setHours(0, 0, 0, 0);
     var desdeISO = desde.toISOString();
     LOADED_DESDE = desdeISO.substring(0,10);
