@@ -144,7 +144,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 .cd.s2{background:var(--accent)!important;color:#fff!important;border-radius:0 6px 6px 0}
 .cd.s1.s2{border-radius:6px}
 .cd.rng{background:rgba(79,124,255,.18);color:var(--text);border-radius:0}
-.cd.vacio{opacity:.4}
+.cd.vacio{opacity:.25;pointer-events:none}
 .iibb-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:6px;padding:5px 10px;font-size:12px}
 .iibb-row span{color:var(--text2)}
 .iibb-row input{width:60px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;text-align:right}
@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.5</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.3</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -958,7 +958,7 @@ async function cargarVentasML(desdeArg){
     // Intentar cargar desde el backend (Supabase) primero
     var desde;
     if(desdeArg){ desde = new Date(desdeArg+'T00:00:00'); }
-    else { desde = new Date(); desde.setDate(desde.getDate()-7); }   // ultima semana (7 dias) por defecto
+    else { desde = new Date(); desde.setDate(desde.getDate()-5); }   // ultimos 5 dias por defecto
     desde.setHours(0, 0, 0, 0);
     var desdeISO = desde.toISOString();
     LOADED_DESDE = desdeISO.substring(0,10);
@@ -2598,7 +2598,7 @@ async function renderReclamo(){
   }
   var tipos={};
   document.querySelectorAll('#reclamo-filtros .rfiltro').forEach(function(b){ if(b.classList.contains('on')) tipos[b.getAttribute('data-tipo')]=true; });
-  var fuente=(typeof DML!=='undefined'&&DML)?DML:[];
+  var fuente=(typeof VENTAS!=='undefined'&&VENTAS)?VENTAS:[];
   var rDes=(document.getElementById('r-des')||{}).value||'';
   var rHas=(document.getElementById('r-has')||{}).value||'';
   var filas=[], total=0, sinMedida=0, vistos={};
@@ -2606,15 +2606,16 @@ async function renderReclamo(){
     var row=fuente[i];
     var sku=String(row.sku||'').trim().toUpperCase();
     if(!sku) continue;
-    var fISO=parseFecha(row.fechaVenta);
+    var fISO=row.fechaISO||'';
     if(rDes&&fISO&&fISO<rDes) continue;
     if(rHas&&fISO&&fISO>rHas) continue;
+    if(row.estado==='cancelada'||row.estado==='devolucion'||row.estado==='sin_costo') continue;
     var forma=String(row.formaEntrega||'').toLowerCase();
-    var tipo=forma.indexOf('flex')>-1?'flex':forma.indexOf('full')>-1?'full':forma.indexOf('colecta')>-1?'colecta':'m1';
+    var tipo=row.esFlex?'flex':forma.indexOf('full')>-1?'full':forma.indexOf('colecta')>-1?'colecta':'m1';
     if(!tipos[tipo]) continue;
     var med=MEDIDAS[sku];
     if(!med||!(med.envioML>0)){ sinMedida++; continue; }
-    var cobrado=Math.max(0, Math.abs(parseFloat(row.costoEnvio)||0) - (parseFloat(row.ingresoEnvio)||0));
+    var cobrado=(parseFloat(row.envioNeto)||0)*1.21;   // ENVÍO NETO de Ventas + IVA 21%
     if(cobrado<=0) continue;
     var deberian=med.envioML;
     var dif=cobrado-deberian;
@@ -2622,7 +2623,7 @@ async function renderReclamo(){
     var nro=String(row.nroVenta||'');
     if(vistos[nro]) continue; vistos[nro]=true;
     total+=dif;
-    filas.push({nro:nro,fechaISO:fISO,pub:row.itemId||'',tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
+    filas.push({nro:nro,fechaISO:fISO,pub:row.titulo||'',tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
   }
   var oc=RECLAMO_ORD.col, od=RECLAMO_ORD.dir;
   filas.sort(function(a,b){
