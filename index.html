@@ -2614,8 +2614,15 @@ async function renderReclamo(){
     var tipo=row.esFlex?'flex':forma.indexOf('full')>-1?'full':forma.indexOf('colecta')>-1?'colecta':'m1';
     if(!tipos[tipo]) continue;
     var med=MEDIDAS[sku];
+    // Fallback: si no está el SKU exacto y tiene sufijo de color (algo-XX),
+    // probar el SKU base sin el sufijo (ej: PER200-NE -> PER200, OFI210-BL -> OFI210).
+    // No se aplica a combos: esos tienen su propia fila (caja más grande) en la planilla.
+    if((!med||!(med.envioML>0)) && sku.indexOf('COMBO')<0){
+      var gu=sku.lastIndexOf('-');
+      if(gu>0){ var m2=MEDIDAS[sku.slice(0,gu)]; if(m2&&m2.envioML>0) med=m2; }
+    }
     if(!med||!(med.envioML>0)){ sinMedida++; continue; }
-    var cobrado=(parseFloat(row.envioNeto)||0)*1.21;   // ENVÍO NETO de Ventas + IVA 21%
+    var cobrado=Math.round((parseFloat(row.envioNeto)||0)*1.21);   // ENVÍO NETO de Ventas + IVA 21% (redondeado a pesos)
     if(cobrado<=0) continue;
     var deberian=med.envioML;
     var dif=cobrado-deberian;
