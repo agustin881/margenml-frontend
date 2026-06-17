@@ -709,7 +709,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
       </div>
       <div class="tw"><table>
         <thead><tr>
-          <th id="rth-fechaISO" onclick="ordReclamo('fechaISO')" style="cursor:pointer">Fecha</th><th id="rth-nro" onclick="ordReclamo('nro')" style="cursor:pointer">N° venta</th><th id="rth-tipo" onclick="ordReclamo('tipo')" style="cursor:pointer">Tipo</th><th id="rth-sku" onclick="ordReclamo('sku')" style="cursor:pointer">SKU</th><th id="rth-pub" onclick="ordReclamo('pub')" style="cursor:pointer">Publicación</th>
+          <th id="rth-fechaISO" onclick="ordReclamo('fechaISO')" style="cursor:pointer">Fecha</th><th id="rth-nro" onclick="ordReclamo('nro')" style="cursor:pointer">N° venta</th><th id="rth-tipo" onclick="ordReclamo('tipo')" style="cursor:pointer">Tipo</th><th id="rth-sku" onclick="ordReclamo('sku')" style="cursor:pointer">SKU</th><th id="rth-pub" onclick="ordReclamo('pub')" style="cursor:pointer">Publicación</th><th id="rth-und" onclick="ordReclamo('und')" style="cursor:pointer">Und.</th>
           <th id="rth-cobrado" onclick="ordReclamo('cobrado')" style="cursor:pointer">Cobrado c/IVA</th><th id="rth-deberian" onclick="ordReclamo('deberian')" style="cursor:pointer">Debería c/IVA</th><th id="rth-dif" onclick="ordReclamo('dif')" style="cursor:pointer">Diferencia</th>
           <th id="rth-largo" onclick="ordReclamo('largo')" style="cursor:pointer">Largo</th><th id="rth-ancho" onclick="ordReclamo('ancho')" style="cursor:pointer">Ancho</th><th id="rth-alto" onclick="ordReclamo('alto')" style="cursor:pointer">Alto</th><th id="rth-peso" onclick="ordReclamo('peso')" style="cursor:pointer">Peso</th>
         </tr></thead>
@@ -2624,13 +2624,14 @@ async function renderReclamo(){
     if(!med||!(med.envioML>0)){ sinMedida++; continue; }
     var cobrado=Math.round((parseFloat(row.envioNeto)||0)*1.21);   // ENVÍO NETO de Ventas + IVA 21% (redondeado a pesos)
     if(cobrado<=0) continue;
-    var deberian=med.envioML;
+    var und=parseInt(row.unidades,10)||1;
+    var deberian=med.envioML*und;   // tarifa unitaria de la planilla × cantidad de unidades del envío
     var dif=cobrado-deberian;
     if(dif<=0) continue;   // solo sobrecobros (ML cobró de más)
     var nro=String(row.nroVenta||'');
     if(vistos[nro]) continue; vistos[nro]=true;
     total+=dif;
-    filas.push({nro:nro,fechaISO:fISO,pub:row.titulo||'',tipo:tipo,sku:sku,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
+    filas.push({nro:nro,fechaISO:fISO,pub:row.titulo||'',tipo:tipo,sku:sku,und:und,cobrado:cobrado,deberian:deberian,dif:dif,largo:med.largo,ancho:med.ancho,alto:med.alto,peso:med.peso});
   }
   var oc=RECLAMO_ORD.col, od=RECLAMO_ORD.dir;
   filas.sort(function(a,b){
@@ -2643,14 +2644,14 @@ async function renderReclamo(){
   meta.textContent=filas.length.toLocaleString('es-AR')+' envíos con sobrecobro · '+sinMedida.toLocaleString('es-AR')+' ventas sin medidas (ignoradas)';
   document.getElementById('reclamo-total').textContent=fmt(total);
   tb.innerHTML=filas.length?filas.map(function(f){
-    return '<tr><td>'+fmtFecha(f.fechaISO)+'</td><td class="ts">'+f.nro+'</td><td>'+tipoLabel(f.tipo)+'</td><td class="ts">'+f.sku+'</td><td class="ts">'+(f.pub||'')+'</td>'+
+    return '<tr><td>'+fmtFecha(f.fechaISO)+'</td><td class="ts">'+f.nro+'</td><td>'+tipoLabel(f.tipo)+'</td><td class="ts">'+f.sku+'</td><td class="ts">'+(f.pub||'')+'</td><td class="tm">'+f.und+'</td>'+
       '<td class="tm">'+fmt(f.cobrado)+'</td><td class="tm">'+fmt(f.deberian)+'</td>'+
       '<td class="tm" style="color:var(--accent);font-weight:700">'+fmt(f.dif)+'</td>'+
       '<td class="tm">'+f.largo+'</td><td class="tm">'+f.ancho+'</td><td class="tm">'+f.alto+'</td><td class="tm">'+f.peso+'</td></tr>';
-  }).join(''):'<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
+  }).join(''):'<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:20px">Sin sobrecobros con los filtros actuales 🎉</td></tr>';
 }
 
-var RECLAMO_TH={fechaISO:'Fecha',nro:'N° venta',tipo:'Tipo',sku:'SKU',pub:'Publicación',cobrado:'Cobrado c/IVA',deberian:'Debería c/IVA',dif:'Diferencia',largo:'Largo',ancho:'Ancho',alto:'Alto',peso:'Peso'};
+var RECLAMO_TH={fechaISO:'Fecha',nro:'N° venta',tipo:'Tipo',sku:'SKU',pub:'Publicación',und:'Und.',cobrado:'Cobrado c/IVA',deberian:'Debería c/IVA',dif:'Diferencia',largo:'Largo',ancho:'Ancho',alto:'Alto',peso:'Peso'};
 function ordReclamo(col){
   if(RECLAMO_ORD.col===col){RECLAMO_ORD.dir*=-1;}else{RECLAMO_ORD.col=col;RECLAMO_ORD.dir=1;}
   renderReclamo();
@@ -2663,10 +2664,10 @@ function updateReclamoHeaders(){
 }
 function exportarReclamo(){
   if(!RECLAMO_FILAS||!RECLAMO_FILAS.length){alert('No hay datos para exportar.');return;}
-  var aoa=[['Fecha','N° venta','Tipo','SKU','Publicación','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
-  RECLAMO_FILAS.forEach(function(f){aoa.push([f.fechaISO,f.nro,tipoLabel(f.tipo).replace(/^[^ ]+ /,''),f.sku,f.pub||'',f.cobrado,f.deberian,f.dif,f.largo,f.ancho,f.alto,f.peso]);});
+  var aoa=[['Fecha','N° venta','Tipo','SKU','Publicación','Unidades','Cobrado c/IVA','Deberia c/IVA','Diferencia','Largo','Ancho','Alto','Peso']];
+  RECLAMO_FILAS.forEach(function(f){aoa.push([f.fechaISO,f.nro,tipoLabel(f.tipo).replace(/^[^ ]+ /,''),f.sku,f.pub||'',f.und,f.cobrado,f.deberian,f.dif,f.largo,f.ancho,f.alto,f.peso]);});
   var total=RECLAMO_FILAS.reduce(function(a,f){return a+f.dif;},0);
-  aoa.push([]);aoa.push(['','','','','','','TOTAL A RECLAMAR',total]);
+  aoa.push([]);aoa.push(['','','','','','','','TOTAL A RECLAMAR',total]);
   var ws=XLSX.utils.aoa_to_sheet(aoa);
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Envios mal cobrados');
