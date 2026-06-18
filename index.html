@@ -200,7 +200,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
           </label>
         </div>
         <div id="iibb-prom-cfg" style="display:flex;align-items:center;gap:6px">
-          <input type="number" id="cfg-iibb" value="3.9" min="0" max="15" step="0.1" onchange="localStorage.setItem('cfg_iibb',this.value)" style="width:65px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+          <input type="number" id="cfg-iibb" value="3.9" min="0" max="15" step="0.1" onchange="sincronizarCfg('iibb',this.value)" style="width:65px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
           <span style="font-size:12px;color:var(--text2)">% sobre precio neto s/IVA</span>
         </div>
         <div id="iibb-prov-cfg" style="display:none;flex-direction:column;gap:8px">
@@ -220,7 +220,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--text2);font-weight:500;min-width:130px">📢 Publicidad</span>
-      <input type="number" id="cfg-pub" value="2.5" min="0" max="10" step="0.1" onchange="localStorage.setItem('cfg_pub',this.value)" style="width:65px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+      <input type="number" id="cfg-pub" value="2.5" min="0" max="10" step="0.1" onchange="sincronizarCfg('pub',this.value)" style="width:65px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
       <span style="font-size:12px;color:var(--text2)">% sobre precio de venta + IVA</span>
     </div>
 
@@ -228,7 +228,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--text2);font-weight:500;min-width:130px">🚚 Costo Flex</span>
-      <input type="number" id="cfg-flex" value="0" min="0" step="1" onchange="localStorage.setItem('cfg_flex',this.value)" style="width:85px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
+      <input type="number" id="cfg-flex" value="0" min="0" step="1" onchange="sincronizarCfg('flex',this.value)" style="width:85px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:monospace;text-align:center">
       <span style="font-size:12px;color:var(--text2)">ARS s/IVA &nbsp;·&nbsp; lo que pagas a tu empresa de logistica</span>
     </div>
 
@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.5</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.7</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -2704,6 +2704,11 @@ function sincronizarCfg(campo, valor){
   localStorage.setItem('cfg_'+campo, valor);
   var orig = document.getElementById('cfg-'+campo);
   if(orig) orig.value = valor;
+  var dash = document.getElementById('cfg-'+campo+'-dash');
+  if(dash) dash.value = valor;
+  // Recalcular en vivo: el envío neto de Flex, IIBB y publicidad se calculan dentro de
+  // analizar(); si ya hay ventas cargadas hay que reprocesar para que tome el valor nuevo.
+  if(typeof DML!=='undefined' && DML && DML.length){ analizar(); }
 }
 
 function cargarCostosDesdeDash(input){
