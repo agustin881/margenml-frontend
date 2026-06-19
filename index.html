@@ -265,7 +265,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
 <div id="screen-dashboard">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap">
-      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.7</span></div>
+      <div class="topbar-logo" style="flex-shrink:0">MargenML <span style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.08em">v6.8</span></div>
       <div class="tabs" style="margin:0;background:transparent;border:none;padding:0;flex:1">
         <div class="tab active" onclick="setTab('ventas',this)">📋 Ventas</div>
         <div class="tab" onclick="setTab('graficos',this)">📊 Gráficos</div>
@@ -730,6 +730,7 @@ tbody td{padding:8px 10px;color:var(--text);white-space:nowrap}
           <button onclick="cargarCostosContabilium()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;cursor:pointer;font-size:13px;color:#10b981;font-family:'DM Sans',sans-serif;transition:.15s" onmouseover="this.style.background='rgba(16,185,129,.2)'" onmouseout="this.style.background='rgba(16,185,129,.1)'">
             🔗 Importar desde Contabilium
           </button>
+          <button id="btn-hist" onclick="cargarHistoricoCMV()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);font-family:'DM Sans',sans-serif;transition:.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">🕐 Cargar CMV histórico</button>
           </div>
           <div id="cfg-costos-lista" style="font-size:12px;color:var(--text3)"></div>
         </div>
@@ -1410,7 +1411,7 @@ window.addEventListener('load', function(){
 
 function initDashboard(){
   if(!document.getElementById('btn-logout')){ var lb=document.createElement('button'); lb.id='btn-logout'; lb.textContent='Salir'; lb.style.cssText='position:fixed;top:8px;right:10px;z-index:9000;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer'; lb.onclick=cerrarSesion; document.body.appendChild(lb); }
-  if(!document.getElementById('btn-hist')){ var hb=document.createElement('button'); hb.id='btn-hist'; hb.textContent='Cargar CMV historico'; hb.style.cssText='position:fixed;top:8px;right:74px;z-index:9000;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer'; hb.onclick=cargarHistoricoCMV; document.body.appendChild(hb); }
+  /* botón 'Cargar CMV histórico' movido a Configuración */
   var tokenGuardado = localStorage.getItem('ml_token');
   var tokenExp      = localStorage.getItem('ml_token_exp');
   if(tokenGuardado && tokenExp && Date.now() < parseInt(tokenExp)){
@@ -2857,7 +2858,7 @@ function vD(id){
   if(v.estado==='devolucion'){
     document.getElementById('m-body').innerHTML=
       '<div class="mr"><span class="ml2">SKU</span><span class="mv ts">'+v.sku+'</span></div>'+
-      '<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>'+
+      '<div class="mr"><span class="ml2">Nro. venta ML</span><a class="mv ts" href="https://www.mercadolibre.com.ar/ventas/'+v.nroVenta+'/detalle" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;cursor:pointer">'+v.nroVenta+'</a></div>'+
       '<div class="mr"><span class="ml2">Fecha</span><span class="mv">'+v.fechaISO+'</span></div>'+
       '<div class="mr"><span class="ml2">Estado ML</span><span class="mv" style="font-size:12px">'+v.estadoML+'</span></div>'+
       '<div class="mr"><span class="ml2">Precio original</span><span class="mv">'+fmt(v.precioConIva)+'</span></div>'+
@@ -2873,7 +2874,7 @@ function vD(id){
   }
   if(v.estado==='cancelada'){
     b='<div class="mr"><span class="ml2">SKU</span><span class="mv ts">'+v.sku+'</span></div>';
-    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
+    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><a class="mv ts" href="https://www.mercadolibre.com.ar/ventas/'+v.nroVenta+'/detalle" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;cursor:pointer">'+v.nroVenta+'</a></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
     b+='<div class="mr"><span class="ml2">Fecha</span><span class="mv">'+v.fechaISO+'</span></div>';
     b+='<div class="mr"><span class="ml2">Precio original</span><span class="mv" style="text-decoration:line-through;color:var(--text3)">'+fmt(v.precioConIva)+'</span></div>';
     b+='<div class="mr"><span class="ml2">Motivo</span><span class="mv" style="color:var(--yellow);font-size:12px">'+v.estadoML+'</span></div>';
@@ -2887,7 +2888,7 @@ function vD(id){
     var div=v.ivaProducto==10.5?'1.105':'1.21';
     var envDet=v.esFlex?' <span style="color:#38bdf8;font-size:11px">🚚 Flex · Costo: '+fmt(v.costoEnvioBruto)+' s/IVA · Ingreso cliente+ML: '+fmt(v.ingresoEnvio)+'</span>':'';
     b='<div class="mr"><span class="ml2">SKU</span><span class="mv ts">'+v.sku+'</span></div>';
-    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><span class="mv ts">'+v.nroVenta+'</span></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
+    b+='<div class="mr"><span class="ml2">Nro. venta ML</span><a class="mv ts" href="https://www.mercadolibre.com.ar/ventas/'+v.nroVenta+'/detalle" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;cursor:pointer">'+v.nroVenta+'</a></div>';if(v.packId){b+='<div class="mr"><span class="ml2">Pack (carrito)</span><span class="mv ts">'+v.packId+'</span></div>';}
     b+='<div class="mr"><span class="ml2">Fecha</span><span class="mv">'+v.fechaISO+'</span></div>';
     b+='<div class="mr"><span class="ml2">Ciudad</span><span class="mv">'+(v.ciudad||'—')+'</span></div>';
     b+='<div class="mr"><span class="ml2">Provincia (IIBB)</span><span class="mv">'+(v.provincia||'—')+'</span></div>';
